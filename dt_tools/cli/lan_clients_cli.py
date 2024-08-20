@@ -13,10 +13,14 @@ which is keyed by mac address.
 For example, entry below identifies Ring Doorbell:
     {
         "XX:XX:XX:XX:XX:XX": {
-            "vendor": "Ring LLC",
-            "hostname": "Ring.Doorbell"
+            "vendor": "Amazon Technologies Inc.",
+            "hostname": "Kitchen.Echo"
         },
     }
+
+and will be displayed as:
+
+192.168.21.99    -> Kitchen.Echo               XX:XX:XX:XX:XX:XX  Amazon Technologies Inc.
 
 """
 import argparse
@@ -27,7 +31,7 @@ import threading
 import time
 
 from loguru import logger as LOGGER
-from dt_tools.console.spinner import Spinner, SpinnerType
+from dt_tools.console.spinner import Spinner
 from dt_tools.net.net_helper import LAN_Client
 import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper

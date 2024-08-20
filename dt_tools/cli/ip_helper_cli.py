@@ -70,8 +70,8 @@ def main():
     # LOGGER.info(f'{parser.prog}  (v{__version__})')
     LOGGER.info('='*80)
     LOGGER.info(f'{parser.prog}: Get IP Info and manage IPHelper cache')
-    LOGGER.info('')
     LOGGER.info('='*80)
+    LOGGER.info('')
     ip_helper = IpHelper()
     LOGGER.level(log_lvl)
     if args.clear or args.list:
@@ -82,7 +82,6 @@ def main():
         else:
             LOGGER.critcal('Unknown command')
     else:
-        LOGGER.info('')
         LOGGER.debug(f'Cache loaded with {len(ip_helper._cache)} entries.')
         LOGGER.debug('')
         if args.ip:
