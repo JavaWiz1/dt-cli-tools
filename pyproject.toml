@@ -1,7 +1,7 @@
 [tool.poetry]
 package-mode = true 
 name = "dt-cli-tools"
-version = "0.1.0"
+version = "0.1.1"
 description = "Various CLIs created from dt-tools packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
@@ -32,7 +32,7 @@ dt-net = "*"
 [tool.poetry.scripts]
 wol-cli = 'dt_tools.cli.wol_cli:main'
 ip-info = 'dt_tools.cli.ip_helper_cli:main'
-lan-clients = 'dt_tools.net.cli.lan_clients_cli:main'
+lan-clients = 'dt_tools.cli.lan_clients_cli:main'
 port-check = 'dt_tools.cli.port_check_cli:main'
 
 [build-system]
