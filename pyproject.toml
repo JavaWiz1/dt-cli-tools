@@ -1,0 +1,40 @@
+[tool.poetry]
+package-mode = true 
+name = "dt-cli-tools"
+version = "0.1.0"
+description = "Various CLIs created from dt-tools packages"
+authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/JavaWiz1/dt-net"
+keywords = ["python", "dt-tools", "network"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+include = ["CHANGELOG.md"]
+
+packages = [
+    { include = "dt_tools" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+# dt-misc = {path = "../dt-misc", develop = true }
+# dt-console = {path = "../dt-console", develop = true }
+# dt-net = {path = "../dt-net", develop = true }
+dt-misc = "*"
+dt-console = "*"
+dt-net = "*"
+
+
+[tool.poetry.scripts]
+wol-cli = 'dt_tools.cli.wol_cli:main'
+ip-info = 'dt_tools.cli.ip_helper_cli:main'
+lan-clients = 'dt_tools.net.cli.lan_clients_cli:main'
+port-check = 'dt_tools.cli.port_check_cli:main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
