@@ -27,16 +27,17 @@ import argparse
 import pathlib
 import queue
 import signal
+import sys
 import threading
 import time
 
-from loguru import logger as LOGGER
-from dt_tools.console.spinner import Spinner
-from dt_tools.net.net_helper import LAN_Client
 import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
+from dt_tools.console.spinner import Spinner
+from dt_tools.net.net_helper import LAN_Client
 # from dt_tools.net.ip_info_helper import IpHelper as IpInfo
 from dt_tools.os.project_helper import ProjectHelper
+from loguru import logger as LOGGER
 
 ip_queue = queue.Queue()
 resolved_queue = queue.SimpleQueue()
@@ -55,6 +56,7 @@ def _build_queue(load_via_broadcast: bool = False) -> int:
         spinner.start_spinner('searching via ARP cache')
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
+    LOGGER.debug(f'{len(client_list)} clients retrieved.')
     for client in client_list:
         spinner.caption_suffix('Loading queue.')
         ip_queue.put(client)
@@ -118,6 +120,7 @@ def _dump_resolved_hosts_to_file(out_filename: str):
 def _signal_handler(signum, frame):
     print('CTRL-C: Waiting for threads to stop...')
     stop_event.set()
+    sys.exit(1)
 
 signal.signal(signal.SIGINT, _signal_handler)
 
@@ -140,7 +143,7 @@ def main():
         LOGGER.disable('dt_tools.net.net_helper') 
         LOGGER.disable('dt_tools.net.ip_info')
 
-    version = ProjectHelper.determine_version('dt-tools-cli')
+    version = ProjectHelper.determine_version('dt-cli-tools')
     LOGGER.info('='*80)
     LOGGER.info(f'{parser.description}  (v{version})')
     LOGGER.info('='*80)
