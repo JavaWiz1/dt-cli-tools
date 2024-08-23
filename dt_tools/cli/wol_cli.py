@@ -91,97 +91,6 @@ def retrieve_lan_devices() -> dict:
     LOGGER.info(f'    {len(lan_dict.keys())} entries detected.')
     return lan_dict
 
-# def get_nmap_dict() -> dict:
-#     scan_cmd = ['nmap', '-sn', '192.168.1.0/24']
-#     if platform.system() == 'Linux':
-#         scan_cmd.insert(0, 'sudo')
-#     spinner = Spinner("    nmap scan ", spinner=SpinnerType.BALL_BOUNCER ,show_elapsed=True)
-#     spinner.start_spinner()
-#     scan_result = subprocess.run(scan_cmd, capture_output=True)
-#     spinner.stop_spinner()
-
-#     stdoutput = scan_result.stdout.decode('utf-8')
-#     mac_dict = {}
-#     host_name = ''
-#     ip = ''
-#     mac = ''
-#     today = str(datetime.date.today())
-#     for line in stdoutput.split('\n'):
-#         LOGGER.debug(f'    {line}')
-#         if line.startswith('Nmap scan report'):
-#             tokens = line.split('for')
-#             token = tokens[1].strip().replace('\r','`')
-#             if token.count('(') > 0:
-#                 host_name = token.split(' ')[0]
-#                 ip = token.split('(')[1].replace(')', '')
-#         elif line.startswith('MAC'):
-#             if host_name:
-#                 tokens = line.split('Address: ')
-#                 token = tokens[1].strip().replace('\r','')
-#                 mac = token.split()[0].lower()
-#                 dict_entry = {'name': host_name.lower(), 'ip': ip, 'mac': mac, 'modified': today }
-#                 LOGGER.debug(f'      {dict_entry}')
-#                 mac_dict[mac_key(mac)] = dict_entry
-#                 host_name = ''
-#                 ip = ''
-#                 mac = ''
-#     LOGGER.info(f'    {len(mac_dict.keys())} nmap entries detected.')
-#     return mac_dict
-
-# def get_arp_dict() -> dict:
-#     if platform.system() == 'Linux':
-#         arp_cmd = ['arp', '-n']
-#     else:
-#         arp_cmd = ['arp', '-a']
-
-#     today = str(datetime.date.today())
-#     spinner = Spinner("    arp scan ", spinner=SpinnerType.BALL_BOUNCER ,show_elapsed=True)
-#     spinner.start_spinner()
-#     scan_result = subprocess.run(arp_cmd, capture_output=True)
-
-#     stdoutput = scan_result.stdout.decode('utf-8')
-#     device_list = []
-#     for line in stdoutput.splitlines(keepends=False):
-#         token = line.split()
-#         name = None
-#         if platform.system() == "Linux":
-#             name = "?"
-#             ip = token[0]
-#             mac = token[2]
-#         else:
-#             if len(token) == 3:
-#                 name = '?'
-#                 ip = token[0]
-#                 mac = token[1]
-
-#         if name and ip.startswith('192'):
-#             if name == "?":
-#                 spinner.caption_suffix(f'attempt to resolve {ip}')
-#                 try:
-#                     name = socket.gethostbyaddr(ip)[0]
-#                     LOGGER.debug(f'ip: {ip} Resolves to {name}')
-#                 except Exception as ex:
-#                     LOGGER.debug(f'unable to resolve {ip} - {repr(ex)}')
-#             if name != '?':
-#                 mac = mac.lower()
-#                 device_entry = {'name': name.lower(), 'ip': ip, 'mac': mac, 'modified': today}
-#                 device_list.append(device_entry)
-
-#     spinner.stop_spinner()        
-#     device_dict = {}
-#     for de in device_list:
-#         mac = de['mac']
-#         device_dict[mac_key(mac)] = de
-    
-#     LOGGER.info(f'    {len(device_dict.keys())} arp entries detected.')
-#     return device_dict
-
-
-# def mac_key(mac: str) -> str:
-#     if len(mac) == 17:
-#         mac = mac.replace(mac[2],'')
-#     return mac
-
 
 # ================================================================================================    
 def main() -> int:
@@ -223,6 +132,7 @@ def main() -> int:
             host = args.ip
         else:
             host = args.name.lower()
+
         LOGGER.info(f'Sending WOL to {host} ',end=end_tag,flush=True)
         success = wol.send_wol_to_host(host, wait_secs=args.timeout)
         if not success:

@@ -68,18 +68,18 @@ def _check_host(host: str, port: int, wait: float = 1.0, display_closed: bool = 
 def _validate_commandline_args(args: argparse.Namespace):
     ret_cd = 0
     if not args.connection and not args.input:
-        print('Must supply either connection or input\n')
+        LOGGER.error('Must supply either connection or input\n')
         ret_cd = 3000
     elif args.connection and args.input:
         print('Must supply ONLY connection OR input, not both\n')
         ret_cd = 3100
     elif args.connection:
         if len(args.connection.split(':')) != 2:
-            print('Invalid parameters, must include host:port\n')
+            LOGGER.error('Invalid parameters, must include host:port\n')
             ret_cd = 3200
     else: # must be input file
         if not pathlib.Path(args.input).exists():
-            print(f'File not found - {args.input}')
+            LOGGER.error(f'File not found - {args.input}')
             ret_cd = 3300
 
     return ret_cd
@@ -125,7 +125,7 @@ def main():
 
     ret_cd = _validate_commandline_args(args)
     if ret_cd > 0:
-        parser.print_help()
+        parser.print_usage()
         return ret_cd
 
     if args.connection:
