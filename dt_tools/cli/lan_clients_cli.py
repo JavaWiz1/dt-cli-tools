@@ -35,7 +35,6 @@ import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
 from dt_tools.console.spinner import Spinner
 from dt_tools.net.net_helper import LAN_Client
-# from dt_tools.net.ip_info_helper import IpHelper as IpInfo
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
 
@@ -132,16 +131,17 @@ def main():
                             help='Output file containing resolved hostnames')
     parser.add_argument('-b', '--broadcast', action='store_true', default=False, 
                             help='Use ARP Broadcast vs Cache to identify clients')
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+    parser.add_argument('-v', '--verbose', action='count', default=0,
                             help='Enable verbose console messages')
 
     args = parser.parse_args()
-    if args.verbose:
-        lh.configure_logger(log_level="DEBUG")
+    if args.verbose == 0:
+        log_lvl = "INFO"
+    elif args.verbose == 1:
+        log_lvl = "DEBUG"
     else:
-        lh.configure_logger()
-        LOGGER.disable('dt_tools.net.net_helper') 
-        LOGGER.disable('dt_tools.net.ip_info')
+        log_lvl = "TRACE"
+    lh.configure_logger(log_level=log_lvl)
 
     version = ProjectHelper.determine_version('dt-cli-tools')
     LOGGER.info('='*80)
