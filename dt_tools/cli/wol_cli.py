@@ -120,7 +120,7 @@ def main() -> int:
     lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_CONSOLE_LOGFMT)
     version = ProjectHelper.determine_version('dt_tools_cli')
     LOGGER.info(f'{parser.prog}: {parser.description} (v{version})')
-    LOGGER.info()
+    LOGGER.info('')
     success = False
     if args.mac:
         wol = WOL()

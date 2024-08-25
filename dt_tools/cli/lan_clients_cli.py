@@ -34,6 +34,8 @@ import time
 import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
 from dt_tools.console.spinner import Spinner
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import ColorFG, ColorStyle
 from dt_tools.net.net_helper import LAN_Client
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
@@ -48,11 +50,13 @@ def _build_queue(load_via_broadcast: bool = False) -> int:
     spinner = Spinner('LAN Clients', show_elapsed=True)
     if load_via_broadcast:
         search_type = "ARP Broadcast"
-        spinner.start_spinner('searching via ARP Broadcast')
+        search_display = console.cwrap(search_type, color=ColorFG.DEFAULT, style=ColorStyle.ITALIC)
+        spinner.start_spinner(f'searching via {search_display}')
         client_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True, include_mac_vendor=True)
     else:
         search_type = "ARP Cache"
-        spinner.start_spinner('searching via ARP cache')
+        search_display = console.cwrap(search_type, color=ColorFG.DEFAULT, style=ColorStyle.ITALIC)
+        spinner.start_spinner(f'searching via {search_display}')
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
     LOGGER.debug(f'{len(client_list)} clients retrieved.')
@@ -61,7 +65,7 @@ def _build_queue(load_via_broadcast: bool = False) -> int:
         ip_queue.put(client)
     
     spinner.stop_spinner()
-    LOGGER.info(f'{len(client_list)} clients identified via {search_type} in {spinner.elapsed_time}.')
+    console.print(f'{console.cwrap(len(client_list),ColorFG.WHITE)} clients identified via ({console.cwrap(search_type, ColorFG.WHITE)}) in {spinner.elapsed_time}.')
 
 def _queue_item_worker(name: str):
     lan_entry: LAN_Client
@@ -71,10 +75,10 @@ def _queue_item_worker(name: str):
         host_name = 'unknown' if lan_entry.hostname is None else lan_entry.hostname
         mac = 'unknown' if lan_entry.mac is None else lan_entry.mac
         vendor = 'unknown' if lan_entry.vendor is None else lan_entry.vendor
+        item_line = f'{ip_address:15} {host_name:28} {mac:17}  {vendor}'
         if 'unknown' in host_name or 'unknown' in vendor:
-            LOGGER.warning(f'{ip_address:15} {host_name:28} {mac:17}  {vendor}')
-        else:
-            LOGGER.info(f'{ip_address:15} {host_name:28} {mac:17}  {vendor}')
+            item_line = console.cwrap(item_line, ColorFG.YELLOW)
+        console.print(item_line)
         queue_entry = f'{ip_address}|{host_name}|{mac}|{vendor}'
         resolved_queue.put(queue_entry)
         ip_queue.task_done()
@@ -82,12 +86,11 @@ def _queue_item_worker(name: str):
             break
 
 def _process_queue():
+    start = time.time()
     threads = []
     num_threads = min(ip_queue.qsize(), 30)
-    print()
-    LOGGER.info('IP Address      Hostname                     MAC                MAC Vendor')
-    LOGGER.info('--------------- ---------------------------- -----------------  --------------------------- ')
-    start = time.time()
+    console.print('')
+    console.print_line_seperator('IP Address      Hostname                     MAC                MAC Vendor', 100)
     for id in range(num_threads):
         worker = threading.Thread(target=_queue_item_worker,args=(id,), daemon=True)        # worker.setDaemon(True)
         worker.start()
@@ -100,9 +103,9 @@ def _process_queue():
     for thread in threads:
         thread.join()
 
-    elapsed = time.time() - start
-    print()
-    LOGGER.info(f'{resolved_queue.qsize()} resolved entries in {elapsed:.2f} seconds using {num_threads} threads.')
+    elapsed = f'{time.time() - start:.2f}'
+    summary_line = f'\n{console.cwrap(resolved_queue.qsize(), ColorFG.WHITE2)} entries resolved in {console.cwrap(elapsed, ColorFG.WHITE2)} seconds using {num_threads} threads.'
+    console.print(summary_line, eol='\n\n')
 
 def _dump_resolved_hosts_to_file(out_filename: str):
     out_buff = ''
@@ -144,14 +147,18 @@ def main():
     lh.configure_logger(log_level=log_lvl)
 
     version = ProjectHelper.determine_version('dt-cli-tools')
-    LOGGER.info('='*80)
-    LOGGER.info(f'{parser.description}  (v{version})')
-    LOGGER.info('='*80)
-    LOGGER.info('')
+    console.print_line_seperator(' ', 80)
+    console.print_line_seperator(f'{console.cwrap(parser.prog, style=ColorStyle.BOLD)}  (v{version})', 80)
+    console.print('')
+    start = time.time()
     _ = _build_queue(args.broadcast)
     _process_queue()
     if args.output:
         _dump_resolved_hosts_to_file(parser.output)
+    
+    elapsed = f'{time.time() - start:.2f}'
+    console.print(f'Total elapsed time {console.cwrap(elapsed, ColorFG.WHITE2, style=ColorStyle.BOLD)} seconds.')
+
 
 if __name__ == "__main__":
     main()
