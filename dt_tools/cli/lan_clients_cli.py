@@ -83,7 +83,7 @@ def _queue_item_worker(name: str):
 
 def _process_queue():
     threads = []
-    num_threads = ip_queue.qsize()
+    num_threads = min(ip_queue.qsize(), 30)
     print()
     LOGGER.info('IP Address      Hostname                     MAC                MAC Vendor')
     LOGGER.info('--------------- ---------------------------- -----------------  --------------------------- ')

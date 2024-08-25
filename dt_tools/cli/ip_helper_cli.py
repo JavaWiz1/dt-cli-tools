@@ -30,6 +30,7 @@ def command_loop(ip_info: IpHelper):
             if len(token) > 1:
                 ip_info.clear_cache(token[1])
             else:
+                # TODO: Prompt - "Are you sure?"
                 ip_info.clear_cache()
         elif cmd in ['L', 'l']:
             if len(token) > 1:
