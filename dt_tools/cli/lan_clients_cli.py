@@ -35,7 +35,7 @@ import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
 from dt_tools.console.spinner import Spinner
 from dt_tools.console.console_helper import ConsoleHelper as console
-from dt_tools.console.console_helper import ColorFG, ColorStyle
+from dt_tools.console.console_helper import ColorFG, TextStyle
 from dt_tools.net.net_helper import LAN_Client
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
@@ -50,12 +50,12 @@ def _build_queue(load_via_broadcast: bool = False) -> int:
     spinner = Spinner('LAN Clients', show_elapsed=True)
     if load_via_broadcast:
         search_type = "ARP Broadcast"
-        search_display = console.cwrap(search_type, color=ColorFG.DEFAULT, style=ColorStyle.ITALIC)
+        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC)
         spinner.start_spinner(f'searching via {search_display}')
         client_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True, include_mac_vendor=True)
     else:
         search_type = "ARP Cache"
-        search_display = console.cwrap(search_type, color=ColorFG.DEFAULT, style=ColorStyle.ITALIC)
+        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC)
         spinner.start_spinner(f'searching via {search_display}')
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
@@ -146,9 +146,9 @@ def main():
         log_lvl = "TRACE"
     lh.configure_logger(log_level=log_lvl)
 
-    version = ProjectHelper.determine_version('dt-cli-tools')
+    version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
     console.print_line_seperator(' ', 80)
-    console.print_line_seperator(f'{console.cwrap(parser.prog, style=ColorStyle.BOLD)}  (v{version})', 80)
+    console.print_line_seperator(f'{parser.prog} {version}', 80)
     console.print('')
     start = time.time()
     _ = _build_queue(args.broadcast)
@@ -157,7 +157,7 @@ def main():
         _dump_resolved_hosts_to_file(parser.output)
     
     elapsed = f'{time.time() - start:.2f}'
-    console.print(f'Total elapsed time {console.cwrap(elapsed, ColorFG.WHITE2, style=ColorStyle.BOLD)} seconds.')
+    console.print(f'Total elapsed time {console.cwrap(elapsed, ColorFG.WHITE2, style=TextStyle.BOLD)} seconds.')
 
 
 if __name__ == "__main__":

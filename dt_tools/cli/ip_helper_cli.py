@@ -9,6 +9,8 @@ from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as nh
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import ColorFG, TextStyle
 from dt_tools.console.console_helper import ConsoleInputHelper as InputHelper
 from dt_tools.net.ip_info_helper import IpHelper
 from dt_tools.os.project_helper import ProjectHelper
@@ -27,20 +29,30 @@ def _display_loop_prelude():
     LOGGER.info('h              This help screen.')
     LOGGER.info('l [9.9.9.9]    List cache.  If IP address supplied, only that entry will be listed.')
     LOGGER.info('q              Quit.')
+    LOGGER.info('')
 
 def display_ip_info(ip_info: IpHelper, ip: str, show_all: bool = True, bypass_cache: bool = False):
-    info_json = ip_info.get_ip_info(ip, bypass_cache=bypass_cache)
-    if info_json.get('error'):
-        display_error(info_json)
+    if nh.ping(ip):
+        info_json = ip_info.get_ip_info(ip, bypass_cache=bypass_cache)
+        if info_json.get('error'):
+            display_error(info_json)
+        else:
+            ip_info.list_cache(ip) 
     else:
-        ip_info.list_cache(ip) 
+        print(f'- {console.cwrap(ip, fg=ColorFG.RED,style=[TextStyle.BOLD, TextStyle.ITALIC])} is not pingable.  Valid host?')
 
 def display_error(error_dict: dict):
     print(f'- {json.dumps(error_dict, indent=2)}')
 
 def command_loop(ip_info: IpHelper):
     _display_loop_prelude()
-    prompt = "Enter IP [b]ypass cache, (c)lear cache [ip], (h)elp, (l)ist [ip], (f)ind str, (q)uit > "
+    c_IP = f"Enter {console.cwrap('IP', ColorFG.WHITE2, style=TextStyle.BOLD)} [b]ypass cache" 
+    c_CLEAR = f"{console.cwrap('(c)', ColorFG.WHITE2, style=TextStyle.BOLD)}lear cache [ip]" 
+    c_HELP = f"{console.cwrap('(h)', ColorFG.WHITE2, style=TextStyle.BOLD)}elp"
+    c_LIST = f"{console.cwrap('(l)', ColorFG.WHITE2, style=TextStyle.BOLD)}ist [ip]"
+    c_FIND = f"{console.cwrap('(f)', ColorFG.WHITE2, style=TextStyle.BOLD)}ind <str>"
+    c_QUIT = f"{console.cwrap('(q)', ColorFG.WHITE2, style=TextStyle.BOLD)}uit"
+    prompt = f"{c_IP}, {c_CLEAR}, {c_HELP}, {c_LIST}, {c_FIND}, {c_QUIT} > "
     token = InputHelper().get_input_with_timeout(prompt).split()
     cmd = token[0]
     while cmd not in ['Q', 'q']:
@@ -101,16 +113,14 @@ def main():
         log_lvl = "DEBUG"
     else:
         log_lvl = "TRACE"
-    lh.configure_logger(log_level=log_lvl, log_format=lh.DEFAULT_CONSOLE_LOGFMT)
+    lh.configure_logger(log_level=log_lvl, log_format=lh.DEFAULT_CONSOLE_LOGFMT, brightness=False)
 
-    # LOGGER.info(f'{parser.prog}  (v{__version__})')
-    version = ProjectHelper.determine_version('dt_cli_tools')
-    LOGGER.info('='*80)
-    LOGGER.info(f'{parser.prog} v{version}')
-    LOGGER.info('='*80)
-    LOGGER.info('')
+    version = f'v{console.cwrap(ProjectHelper.determine_version("dt_cli_tools"), style=TextStyle.ITALIC)}'
+    console.print_line_seperator(length=80)
+    console.print_line_seperator(f'{parser.prog}  {version}', 80)
+    console.print('')
+
     ip_helper = IpHelper()
-    LOGGER.level(log_lvl)
     if args.clear or args.list:
         if args.clear:
             LOGGER.success(f'  {ip_helper.clear_cache(args.ip)} entries removed.')
@@ -119,11 +129,13 @@ def main():
         else:
             LOGGER.critcal('  Unknown command')
     else:
-        LOGGER.info(f'Cache loaded with {len(ip_helper._cache)} entries.')
-        LOGGER.debug('')
         if args.ip:
+            LOGGER.debug(f'Cache loaded with {len(ip_helper._cache)} entries.')
+            LOGGER.debug('')
             display_ip_info(ip_helper, args.ip, show_all=True)
         else:
+            LOGGER.info(f'Cache loaded with {len(ip_helper._cache)} entries.')
+            LOGGER.info('')
             command_loop(ip_helper)
 
 if __name__ == "__main__":
