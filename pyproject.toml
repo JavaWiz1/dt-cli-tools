@@ -27,11 +27,12 @@ dt-net = {path = "../dt-net", develop = true }
 # dt-misc = "*"
 # dt-console = "*"
 # dt-net = "*"
+dataclasses-json = "^0.6.7"
 
 
 [tool.poetry.scripts]
 wol-cli = 'dt_tools.cli.wol_cli:main'
-ip-info = 'dt_tools.cli.ip_helper_cli:main'
+ip-helper = 'dt_tools.cli.ip_helper_cli:main'
 lan-clients = 'dt_tools.cli.lan_clients_cli:main'
 port-check = 'dt_tools.cli.port_check_cli:main'
 

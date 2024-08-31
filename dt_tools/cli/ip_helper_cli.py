@@ -116,8 +116,8 @@ def main():
     lh.configure_logger(log_level=log_lvl, log_format=lh.DEFAULT_CONSOLE_LOGFMT, brightness=False)
 
     version = f'v{console.cwrap(ProjectHelper.determine_version("dt_cli_tools"), style=TextStyle.ITALIC)}'
-    console.print_line_seperator(length=80)
-    console.print_line_seperator(f'{parser.prog}  {version}', 80)
+    console.print_line_separator(length=80)
+    console.print_line_separator(f'{parser.prog}  {version}', 80)
     console.print('')
 
     ip_helper = IpHelper()

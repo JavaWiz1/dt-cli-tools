@@ -1,109 +1,243 @@
+"""
+Send Wake-on-LAN (WOL) packet to device.
+
+WOL is a standard for Ethernet and Token-Ring which allows a computer to be 
+turned on or awakened from sleep-mode via a network message.
+
+A 'magic' packet is sent to the MAC address of the target device, which if
+enabled, will signal the device to wake-up.
+
+This module allows the user to send WOL to hostnames and IPs in addition to
+the MAC address.  This is accomplished by leveraging a cache that this program
+maintains which relates the MAC to IP and hostname.
+
+Cache commands:
+
+-s Scan for new devices to 'seed' or update the cache run.  
+-l List the contents of the cache to the terminal.
+-c Clean/purge cache of stale entries (devices that have not been online in 7 or more days).
+
+Note:
+
+The scan (-s) operation should be done on a regular basis.  This will keep the cache 
+updated with the most recent online devices, their hostnames and IPs.
+
+Returns:
+    _type_: _description_
+"""
 import argparse
 import datetime
 import json
-# import platform
-# import socket
-# import subprocess
+import pathlib
 import sys
-from typing import List
+from dataclasses import dataclass
+from typing import Dict, List
+
+from dataclasses_json import dataclass_json
 from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
-# from dt_tools.config.config_helper import Configuration
-from dt_tools.console import console_helper as ch
-from dt_tools.console.spinner import Spinner, SpinnerType
-# from dt_tools.net.ip_info_helper import IpHelper
-from dt_tools.net.wol import WOL
-from dt_tools.os.project_helper import ProjectHelper
 import dt_tools.net.net_helper as net_helper
+from dt_tools.console.console_helper import ColorFG, TextStyle
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import ConsoleInputHelper as ih
+from dt_tools.console.spinner import Spinner, SpinnerType
 from dt_tools.net.net_helper import LAN_Client
-import pathlib 
-
+from dt_tools.net.wol import WOL
+from dt_tools.os.os_helper import OSHelper
+from dt_tools.os.project_helper import ProjectHelper
 
 MAC_INFO_LOCATION=pathlib.Path('~').expanduser().absolute() / ".IpHelper" / "WolMacDefinitions.json"
 
+@dataclass_json
+@dataclass
+class WOL_Device():
+    name: str
+    ip: str
+    mac: str
+    modified: datetime.date
 
-def lookup_mac_entry(device_id: str) -> dict:
-    mac_dict = retrieve_device_dict()
-    found_entry = {'name': '', 'ip': '', 'mac': ''}
-    for entry in mac_dict.values():
-        if entry['ip'] == device_id or entry['name'].startswith(device_id):
+
+def lookup_mac_entry(device_id: str) -> WOL_Device:
+    cached_mac_dict = retrieve_device_dict()
+    # found_entry = {'name': '', 'ip': '', 'mac': ''}
+    found_entry = None
+    for entry in cached_mac_dict.values():
+        if entry.ip == device_id or entry.name.lower().startswith(device_id.lower()):
             found_entry = entry
             break
-    return (found_entry['mac'], found_entry['name'], found_entry['ip'])
+    return found_entry
 
-def print_device_dict(device_dict: dict):
-    # print(json.dumps(device_dict, indent=2))
+def print_device_dict(device_dict: Dict[str, WOL_Device]):
     LOGGER.info("")
     LOGGER.info('Mac                IP               Name')
     LOGGER.info('-----------------  ---------------  -----------------------------------------')
-    sorted_devices = dict(sorted(device_dict.items(), key=lambda x:int(x[1]['ip'].split('.')[3])))
+    
+    devices: Dict[str, WOL_Device] = {}
+    # Build dict with IP key in format 999.999.999.999 (for sorting)
+    for device in device_dict.values():
+        octet = device.ip.split('.')
+        ip_key = f'{int(octet[0]):3d}.{int(octet[1]):3d}.{int(octet[2]):3c}.{int(octet[3]):3d}'
+        devices[ip_key] = device
+    # Build sorted dictionary
+    sorted_ips = list(devices.keys())
+    sorted_ips.sort()
+    sorted_devices = {i: devices[i] for i in sorted_ips}
+    # Display
     for entry in sorted_devices.values():
-        LOGGER.info(f"{entry['mac']}  {entry['ip']:15}  {entry['name']}")
-    LOGGER.info(f'{len(device_dict.keys())} entries.')
+        LOGGER.info(f"{entry.mac}  {entry.ip:15}  {entry.name}")
 
-def save_device_dict(device_dict: dict) -> bool:
+    LOGGER.info('')
+    LOGGER.info(f'{len(device_dict.keys())} device entries.')
+
+def save_device_dict(device_dict: Dict[str, WOL_Device]) -> bool:
     LOGGER.info('  - Save updated device list')
     MAC_INFO_LOCATION.with_suffix(".json.5").unlink(missing_ok = True)
     for i in range(4,0,-1):
         if MAC_INFO_LOCATION.with_suffix(f'.json.{i}').exists(): 
             MAC_INFO_LOCATION.with_suffix(f'.json.{i}').rename(MAC_INFO_LOCATION.with_suffix(f'.json.{i+1}'))
     if MAC_INFO_LOCATION.exists():
-        MAC_INFO_LOCATION.rename(MAC_INFO_LOCATION.with_suffix('.json.1'))    
-    MAC_INFO_LOCATION.write_text(json.dumps(device_dict, indent=2))
+        MAC_INFO_LOCATION.rename(MAC_INFO_LOCATION.with_suffix('.json.1'))
+    
+    json_dict = {}
+    for k,v in device_dict.items():
+        # Convert WOL_Device to serializable object
+        json_dict[k] = v.to_dict()
+
+    MAC_INFO_LOCATION.write_text(json.dumps(json_dict, indent=2))
     LOGGER.info(f'    {len(device_dict.keys())} entries saved to {MAC_INFO_LOCATION}.')
     return True
 
-def retrieve_device_dict() -> dict:
-    device_dict = {}
+def retrieve_device_dict() -> Dict[str, WOL_Device]:
+    device_dict: Dict[str, WOL_Device] = {}
     if MAC_INFO_LOCATION.exists():
         LOGGER.debug(f'loading device dict: {MAC_INFO_LOCATION}')
-        device_dict = json.loads(MAC_INFO_LOCATION.read_text())
+        json_dict = json.loads(MAC_INFO_LOCATION.read_text())
+        for k,v in json_dict.items():
+            # Reconstruct WOL_Device
+            device = WOL_Device(name=v['name'], ip=v['ip'], mac=v['mac'], modified=v['modified'])
+            device_dict[k] = device
 
-    LOGGER.info(f'  - Retrieve cached device list. {len(device_dict.keys())} entries loaded.')
+    LOGGER.info(f'  - Retrieved cached device list. {len(device_dict.keys())} entries loaded.')
     return device_dict
 
-def merge_device_dicts(new_device_list: list, current_device_dict: dict, desc: str = "Merge new or update devices") -> dict:
-    LOGGER.info(f'  - {desc}')
-    new_cnt = 0
-    for mac in current_device_dict.keys():
-        if new_device_list.get(mac,None) is None:
-            new_cnt +=1
-        new_device_list[mac] = current_device_dict[mac]
-
-    if new_cnt > 0:
-        LOGGER.info(f'    {new_cnt} entries added, {len(new_device_list)} total entries.')
+def merge_device_dicts(realtime_device_dict: Dict[str, WOL_Device], 
+                       cached_device_dict: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
     
-    return new_device_list
+    LOGGER.info('  - Build cache')
+    new_cnt = 0
+    upd_cnt = 0
+    exist_cnt = 0
+    cached_cnt = 0
+    merged_dict: Dict[str, WOL_Device] = {}
 
-def retrieve_lan_devices() -> dict:
-    LOGGER.info('  - Scan for devices')
-    lan_list: List[LAN_Client] = []
+    # Load all reporting devices
+    for mac in realtime_device_dict.keys():
+        if cached_device_dict.get(mac, None) is None:
+            new_cnt += 1
+            LOGGER.debug(f'new: {mac}')
+        else:
+            if realtime_device_dict[mac].ip != cached_device_dict[mac].ip or \
+               realtime_device_dict[mac].name != cached_device_dict[mac].name:
+                upd_cnt += 1
+                LOGGER.debug(f'upd: {mac}')
+                LOGGER.debug(f'  realtime: {realtime_device_dict[mac]}')
+                LOGGER.debug(f'  cached  : {cached_device_dict[mac]}')
+            else:
+                LOGGER.debug(f'existing: {mac}')
+                exist_cnt += 1
+        merged_dict[mac] = realtime_device_dict[mac]
+
+    # Load all offline (non reporting) cached devices    
+    for mac in cached_device_dict.keys():
+        if merged_dict.get(mac,None) is None:
+            cached_cnt +=1
+            merged_dict[mac] = cached_device_dict[mac]
+            LOGGER.debug(f'not online: {mac}')
+
+    tot_cnt = len(merged_dict)
+    LOGGER.info(f'      {exist_cnt} existing, {new_cnt} added, {upd_cnt} updated, {cached_cnt} not online, {tot_cnt} total entries.')
+
+    return merged_dict
+
+def clean_cache(current_cache: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
+    today = datetime.date.today()
+    updated_cache: Dict[str, WOL_Device] = {}
+    for mac, entry in current_cache.items():
+        modified = datetime.datetime.strptime(entry.modified, '%Y-%m-%d').date()
+        if (today - modified).days > 7:
+            # device hasn't been seen (via this pgm) in over a week
+            continue
+        updated_cache[mac] = entry
+    
+    entries_dropped = len(current_cache) - len(updated_cache)
+    if entries_dropped > 0:
+        LOGGER.info(f'    {entries_dropped} stale entries dropped, {len(updated_cache)} total entries remain in cache.')
+    else:
+        LOGGER.info(f'    No stale entries detected.  {len(updated_cache)} total entries remain in cache.')
+        
+    return updated_cache
+
+def retrieve_lan_devices() -> Dict[str, WOL_Device]:
+    LOGGER.info('  - Scan for current online devices')
     spinner = Spinner('    ARP Broadcast scan ', spinner=SpinnerType.BALL_BOUNCER, show_elapsed=True)
+
     spinner.start_spinner()
+    lan_list: List[LAN_Client] = []
     lan_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True)
     today = str(datetime.date.today())
-    lan_dict = {}
+    wol_lan_dict: Dict[str, WOL_Device] = {}
     for entry in lan_list:
-        if not entry.hostname.startswith('-> '):
-            lan_dict[entry.mac] = {"name": entry.hostname, "ip": entry.ip, "mac": entry.mac, "modified": today}
+        if entry.hostname is not None and not entry.hostname.startswith('-> '):
+            device = WOL_Device(name=entry.hostname, ip=entry.ip, mac=entry.mac, modified=today)
+            wol_lan_dict[entry.mac] = device
     spinner.stop_spinner()
-    LOGGER.info(f'    {len(lan_dict.keys())} entries detected.')
-    return lan_dict
 
+    LOGGER.info(f'      {len(wol_lan_dict.keys())} devices detected.')
+    return wol_lan_dict
+
+
+def device_scan() -> bool:
+    realtime_device_dict = retrieve_lan_devices()
+    cached_device_dict = retrieve_device_dict()
+    merged_device_dict = merge_device_dicts(realtime_device_dict, cached_device_dict)
+    if not dicts_equal(cached_device_dict, merged_device_dict):
+        save_device_dict(merged_device_dict)
+    return True
+
+def clean_device_cache() -> bool:
+    realtime_device_dict = retrieve_lan_devices()
+    cached_device_dict = retrieve_device_dict()
+    merged_device_dict = merge_device_dicts(realtime_device_dict, cached_device_dict)
+    updated_cache = clean_cache(merged_device_dict)
+    if not dicts_equal(updated_cache, cached_device_dict):
+        save_device_dict(updated_cache)
+    return True
+
+def dicts_equal(d1: dict, d2: dict) -> bool:
+    are_equal = False
+    if len(d1.keys()) == len(d2.keys()):
+        shared_items = {k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]}
+        if len(d1.keys()) == len(shared_items.keys()):
+            are_equal = True
+    return are_equal
 
 # ================================================================================================    
 def main() -> int:
-    ch.enable_ctrl_c_handler()
-    parser = argparse.ArgumentParser(prog='wol-cli', description='Wake-on Lan CLI')
+    c_handle = lh.configure_logger(log_level="INFO", log_format=lh.DEFAULT_CONSOLE_LOGFMT, brightness=False)
+    OSHelper.enable_ctrl_c_handler()
+    version = ProjectHelper.determine_version('dt_cli_tools')
+    parser = argparse.ArgumentParser(prog='wol-cli', description=f'Wake-on-Lan CLI  v{version}')
     input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument('-m', '--mac')
-    input_group.add_argument('-n', '--name')
-    input_group.add_argument('-i', '--ip')
-    input_group.add_argument('-l', '--list', action='store_true')
-    input_group.add_argument('-s', '--scan', action='store_true')
-    parser.add_argument('-t','--timeout', type=int, default=45)
-    parser.add_argument('-v','--verbose', action='store_true')
+    input_group.add_argument('-m', '--mac', type=str, help='Wake via MAC Address')
+    input_group.add_argument('-n', '--name', type=str, help='Wake via Hostname')
+    input_group.add_argument('-i', '--ip', type=str, help='Wake via IP Address')
+    input_group.add_argument('-l', '--list', action='store_true', help='List WOL cache')
+    input_group.add_argument('-s', '--scan', action='store_true', help='Scan and create/update WOL cache')
+    input_group.add_argument('-c', '--clean', action='store_true', help='Clean cache of old entries')
+    input_group.add_argument('-d', '--delete', action='store_true', help='Delete cache and re-create')
+    parser.add_argument('-t','--timeout', type=int, default=45, help='Seconds to wait for device to come online')
+    parser.add_argument('-v','--verbose', action='store_true', help="Verbose logging")
     
     try:
         args = parser.parse_args()
@@ -117,43 +251,61 @@ def main() -> int:
     if args.verbose:
         LG_LEVEL = "DEBUG"
         end_tag = ''
-    lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_CONSOLE_LOGFMT)
-    version = ProjectHelper.determine_version('dt_tools_cli')
-    LOGGER.info(f'{parser.prog}: {parser.description} (v{version})')
+    lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_CONSOLE_LOGFMT,log_handle=c_handle, brightness=False)
+    
     LOGGER.info('')
+    LOGGER.info(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}')
+    LOGGER.info('')
+
     success = False
+    wol = WOL()
     if args.mac:
-        wol = WOL()
-        LOGGER.info(f'Sending WOL to {args.mac} ', end=end_tag, flush=True)
+        LOGGER.info(f'Sending WOL to {console.cwrap(args.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])}', end=end_tag, flush=True)
         success = wol.send_wol_via_mac(args.mac, args.timeout)
+        if not success:
+            LOGGER.error(f'- {wol.status_message}')
+
     elif args.ip or args.name:
-        wol = WOL()
         if args.ip:
             host = args.ip
         else:
             host = args.name.lower()
-
-        LOGGER.info(f'Sending WOL to {host} ',end=end_tag,flush=True)
+        LOGGER.info(f'Sending WOL to {console.cwrap(host, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ',end=end_tag,flush=True)
         success = wol.send_wol_to_host(host, wait_secs=args.timeout)
         if not success:
-            mac, name, ip = lookup_mac_entry(host)
-            if mac:
-                LOGGER.info(f'  - {host} resolves to {mac}/{ip}')
-                LOGGER.info(f'Sending WOL to {mac} ', end=end_tag, flush=True)
-                success = wol.send_wol_via_mac(mac, wait_secs=args.timeout, ip=ip)
+            LOGGER.error(f'- Unable to send to host: {wol.status_message}')
+            LOGGER.info('- Attempt to lookup host in cache...')
+            mac_entry = lookup_mac_entry(host)
+            if mac_entry is not None:
+                LOGGER.info(f'  - {host} resolves to {mac_entry.mac}/{mac_entry.ip}')
+                LOGGER.info(f'Sending WOL to {console.cwrap(mac_entry.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ', end=end_tag, flush=True)
+                success = wol.send_wol_via_mac(mac_entry.mac, wait_secs=args.timeout, ip=mac_entry.ip)
+                if not success:
+                    LOGGER.error(f'- {wol.status_message}')
 
     elif args.list:
+        LOGGER.warning('Display device list')
         device_dict = retrieve_device_dict()
         print_device_dict(device_dict)
         success = True
-    else: # args.scan -s
-        LOGGER.info('MAC Scan requested')
-        new_device_dict = retrieve_lan_devices()
-        cur_device_dict = retrieve_device_dict()
-        merged_device_dict = merge_device_dicts(new_device_dict, cur_device_dict, "Merge nmap/arp with current devices")
-        # new_entries = len(merged_device_dict) - len(cur_device_dict)
-        save_device_dict(merged_device_dict)
-        success = True
+
+    elif args.scan:
+        LOGGER.warning('Device Scan requested')
+        success = device_scan()
+
+    elif args.clean:
+        LOGGER.warning('Cache clean requested')
+        success = clean_device_cache()
+
+    elif args.delete:
+        LOGGER.error('Cache delete requested')
+        if ih.get_input_with_timeout('Are you sure? ', ih.YES_NO_RESPONSE).lower() == 'y':
+            LOGGER.warning('- Removing existing cache')
+            MAC_INFO_LOCATION.unlink(missing_ok=True)
+            LOGGER.warning('Rebuild cache')
+            success = device_scan()
+
+    LOGGER.info('')
     if success:
         LOGGER.success('Successful.')
     else:

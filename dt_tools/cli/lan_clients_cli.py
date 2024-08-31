@@ -77,7 +77,7 @@ def _queue_item_worker(name: str):
         vendor = 'unknown' if lan_entry.vendor is None else lan_entry.vendor
         item_line = f'{ip_address:15} {host_name:28} {mac:17}  {vendor}'
         if 'unknown' in host_name or 'unknown' in vendor:
-            item_line = console.cwrap(item_line, ColorFG.YELLOW)
+            item_line = console.cwrap(item_line, ColorFG.YELLOW2)
         console.print(item_line)
         queue_entry = f'{ip_address}|{host_name}|{mac}|{vendor}'
         resolved_queue.put(queue_entry)

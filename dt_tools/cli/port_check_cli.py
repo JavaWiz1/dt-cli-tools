@@ -13,16 +13,29 @@ import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
 from dt_tools.os.os_helper import OSHelper
 from dt_tools.os.project_helper import ProjectHelper
-
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import ColorFG, TextStyle
 stop_event = threading.Event()
+
+def _sub_list(in_list: list, cols: int) -> list:
+    final = [in_list[i * cols:(i + 1) * cols] for i in range((len(in_list) + cols - 1) // cols )] 
+    return final
+
 
 def _list_common_ports():
     LOGGER.info('Common Ports')
     LOGGER.info('')
-    LOGGER.info('  Port  Description')
-    LOGGER.info('  ----- -------------')
-    for p_name, port in net_helper.COMMON_PORTS.items():
-        LOGGER.info(f'  {port:5d} {p_name}')
+    LOGGER.info('  Port  Description           Port  Description           Port  Description')
+    LOGGER.info('  ----- --------------------  ----- --------------------  ----- --------------------')
+    chunks = _sub_list(list(net_helper.COMMON_PORTS.items()), 3)
+    for item in chunks:
+        p1_name = item[0][0]
+        port1   = f'{item[0][1]:5d}'.lstrip('0') if len(item) > 0 else ''
+        p2_name = item[1][0] if len(item) > 1 else ''
+        port2   = f'{item[1][1]:5d}'.lstrip('0') if len(item) > 1 else ''
+        p3_name = item[2][0] if len(item) > 2 else ''
+        port3   = f'{item[2][1]:5d}'.lstrip('0') if len(item) > 2 else ''
+        LOGGER.info(f'  {port1:5} {p1_name:20}  {port2:5} {p2_name:20}  {port3:5} {p3_name:20}')
 
 def _process_host_file(input_filename: str, wait: float = 1.0, only_open: bool = False) -> int:
     LOGGER.debug(f'_process_host_file() - {input_filename}')
@@ -194,16 +207,15 @@ def main():
         log_level = "DEBUG"
     else:
         log_level = "TRACE"
-    lh.configure_logger(log_level=log_level)
+    lh.configure_logger(log_level=log_level, brightness=False)
 
-    version = ProjectHelper.determine_version('dt-cli-tools')
-    LOGGER.info('='*80)
-    LOGGER.info(f'{parser.prog}  (v{version})')
-    LOGGER.info('='*80)
+    version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
+    console.print_line_seperator(' ', 80)
+    console.print_line_seperator(f'{parser.prog} {version}', 80)
+    console.print('')
 
     ret_cd = _validate_commandline_args(args)
     if ret_cd > 0:
-        LOGGER.info('')
         parser.print_usage()
         return ret_cd
 
