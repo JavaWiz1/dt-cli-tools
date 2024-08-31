@@ -47,16 +47,16 @@ stop_event = threading.Event()
 
 def _build_queue(load_via_broadcast: bool = False) -> int:
     # Retrieve clients based on ARP cache
-    spinner = Spinner('LAN Clients', show_elapsed=True)
+    spinner = Spinner('Searching', show_elapsed=True)
     if load_via_broadcast:
         search_type = "ARP Broadcast"
         search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC)
-        spinner.start_spinner(f'searching via {search_display}')
+        spinner.start_spinner(f'searching for clients via {search_display}')
         client_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True, include_mac_vendor=True)
     else:
         search_type = "ARP Cache"
         search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC)
-        spinner.start_spinner(f'searching via {search_display}')
+        spinner.start_spinner(f'searching for clients via {search_display}')
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
     LOGGER.debug(f'{len(client_list)} clients retrieved.')
@@ -90,7 +90,7 @@ def _process_queue():
     threads = []
     num_threads = min(ip_queue.qsize(), 30)
     console.print('')
-    console.print_line_seperator('IP Address      Hostname                     MAC                MAC Vendor', 100)
+    console.print_line_separator('IP Address      Hostname                     MAC                MAC Vendor', 100)
     for id in range(num_threads):
         worker = threading.Thread(target=_queue_item_worker,args=(id,), daemon=True)        # worker.setDaemon(True)
         worker.start()
@@ -107,18 +107,22 @@ def _process_queue():
     summary_line = f'\n{console.cwrap(resolved_queue.qsize(), ColorFG.WHITE2)} entries resolved in {console.cwrap(elapsed, ColorFG.WHITE2)} seconds using {num_threads} threads.'
     console.print(summary_line, eol='\n\n')
 
-def _dump_resolved_hosts_to_file(out_filename: str):
+def _dump_resolved_hosts_to_file(out_filename: str) -> bool:
+    success = False
     out_buff = ''
     while not resolved_queue.empty():
         host_tuple = resolved_queue.get()
         out_buff += f'{host_tuple}\n'
     fh = pathlib.Path(out_filename)
     try:
-        fh.write_text(out_buff)
-        print(f'Dump file: {fh.absolute()}')
-    except:  # noqa: E722
-        print(out_buff)
-        
+        fh.write_text(out_buff, encoding='utf-8')
+        console.print(f'Dump file: {fh.absolute()} created.')
+        success = True
+    except Exception as ex: 
+        LOGGER.exception(f'Unable to create {fh.absolute()}')
+
+    return success
+
 def _signal_handler(signum, frame):
     print('CTRL-C: Waiting for threads to stop...')
     stop_event.set()
@@ -147,14 +151,14 @@ def main():
     lh.configure_logger(log_level=log_lvl)
 
     version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
-    console.print_line_seperator(' ', 80)
-    console.print_line_seperator(f'{parser.prog} {version}', 80)
+    console.print_line_separator(' ', 80)
+    console.print_line_separator(f'{parser.prog} {version}', 80)
     console.print('')
     start = time.time()
     _ = _build_queue(args.broadcast)
     _process_queue()
     if args.output:
-        _dump_resolved_hosts_to_file(parser.output)
+        _dump_resolved_hosts_to_file(args.output)
     
     elapsed = f'{time.time() - start:.2f}'
     console.print(f'Total elapsed time {console.cwrap(elapsed, ColorFG.WHITE2, style=TextStyle.BOLD)} seconds.')

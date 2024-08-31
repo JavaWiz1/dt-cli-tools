@@ -53,7 +53,9 @@ def command_loop(ip_info: IpHelper):
     c_FIND = f"{console.cwrap('(f)', ColorFG.WHITE2, style=TextStyle.BOLD)}ind <str>"
     c_QUIT = f"{console.cwrap('(q)', ColorFG.WHITE2, style=TextStyle.BOLD)}uit"
     prompt = f"{c_IP}, {c_CLEAR}, {c_HELP}, {c_LIST}, {c_FIND}, {c_QUIT} > "
-    token = InputHelper().get_input_with_timeout(prompt).split()
+    token = ''
+    while len(token) == 0:
+        token = InputHelper().get_input_with_timeout(prompt).split()
     cmd = token[0]
     while cmd not in ['Q', 'q']:
         
@@ -96,7 +98,8 @@ def command_loop(ip_info: IpHelper):
                 display_ip_info(ip_info, token[0], show_all=True, bypass_cache=bypass_cache)
         
         token = ''
-        token = InputHelper().get_input_with_timeout(f"\n{prompt}").split()
+        while len(token) == 0:
+            token = InputHelper().get_input_with_timeout(f"\n{prompt}").split()
         cmd = token[0]
 
 def main():
