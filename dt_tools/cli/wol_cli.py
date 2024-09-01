@@ -13,17 +13,18 @@ maintains which relates the MAC to IP and hostname.
 
 Cache commands:
 
--s Scan for new devices to 'seed' or update the cache run.  
--l List the contents of the cache to the terminal.
--c Clean/purge cache of stale entries (devices that have not been online in 7 or more days).
+  - -s Scan for new devices to 'seed' or update the cache run.  
+  - -l List the contents of the cache to the terminal.
+  - -c Clean/purge cache of stale entries (devices that have not been online in 7 or more days).
 
-Note:
+Note::
 
 The scan (-s) operation should be done on a regular basis.  This will keep the cache 
 updated with the most recent online devices, their hostnames and IPs.
 
 Returns:
-    _type_: _description_
+    int: True if WOL packet sent succesfully else False
+
 """
 import argparse
 import datetime
@@ -51,14 +52,14 @@ MAC_INFO_LOCATION=pathlib.Path('~').expanduser().absolute() / ".IpHelper" / "Wol
 
 @dataclass_json
 @dataclass
-class WOL_Device():
+class _WOL_Device():
     name: str
     ip: str
     mac: str
     modified: datetime.date
 
 
-def _lookup_mac_entry(device_id: str) -> WOL_Device:
+def _lookup_mac_entry(device_id: str) -> _WOL_Device:
     cached_mac_dict = _retrieve_device_dict()
     # found_entry = {'name': '', 'ip': '', 'mac': ''}
     found_entry = None
@@ -68,12 +69,12 @@ def _lookup_mac_entry(device_id: str) -> WOL_Device:
             break
     return found_entry
 
-def _print_device_dict(device_dict: Dict[str, WOL_Device]):
+def _print_device_dict(device_dict: Dict[str, _WOL_Device]):
     LOGGER.info("")
     LOGGER.info('Mac                IP               Name')
     LOGGER.info('-----------------  ---------------  -----------------------------------------')
     
-    devices: Dict[str, WOL_Device] = {}
+    devices: Dict[str, _WOL_Device] = {}
     # Build dict with IP key in format 999.999.999.999 (for sorting)
     for device in device_dict.values():
         octet = device.ip.split('.')
@@ -90,7 +91,7 @@ def _print_device_dict(device_dict: Dict[str, WOL_Device]):
     LOGGER.info('')
     LOGGER.info(f'{len(device_dict.keys())} device entries.')
 
-def _save_device_dict(device_dict: Dict[str, WOL_Device]) -> bool:
+def _save_device_dict(device_dict: Dict[str, _WOL_Device]) -> bool:
     LOGGER.info('  - Save updated device list')
     MAC_INFO_LOCATION.with_suffix(".json.5").unlink(missing_ok = True)
     for i in range(4,0,-1):
@@ -108,28 +109,28 @@ def _save_device_dict(device_dict: Dict[str, WOL_Device]) -> bool:
     LOGGER.info(f'    {len(device_dict.keys())} entries saved to {MAC_INFO_LOCATION}.')
     return True
 
-def _retrieve_device_dict() -> Dict[str, WOL_Device]:
-    device_dict: Dict[str, WOL_Device] = {}
+def _retrieve_device_dict() -> Dict[str, _WOL_Device]:
+    device_dict: Dict[str, _WOL_Device] = {}
     if MAC_INFO_LOCATION.exists():
         LOGGER.debug(f'loading device dict: {MAC_INFO_LOCATION}')
         json_dict = json.loads(MAC_INFO_LOCATION.read_text())
         for k,v in json_dict.items():
             # Reconstruct WOL_Device
-            device = WOL_Device(name=v['name'], ip=v['ip'], mac=v['mac'], modified=v['modified'])
+            device = _WOL_Device(name=v['name'], ip=v['ip'], mac=v['mac'], modified=v['modified'])
             device_dict[k] = device
 
     LOGGER.info(f'  - Retrieved cached device list. {len(device_dict.keys())} entries loaded.')
     return device_dict
 
-def _merge_device_dicts(realtime_device_dict: Dict[str, WOL_Device], 
-                       cached_device_dict: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
+def _merge_device_dicts(realtime_device_dict: Dict[str, _WOL_Device], 
+                       cached_device_dict: Dict[str, _WOL_Device]) -> Dict[str, _WOL_Device]:
     
     LOGGER.info('  - Build cache')
     new_cnt = 0
     upd_cnt = 0
     exist_cnt = 0
     cached_cnt = 0
-    merged_dict: Dict[str, WOL_Device] = {}
+    merged_dict: Dict[str, _WOL_Device] = {}
 
     # Load all reporting devices
     for mac in realtime_device_dict.keys():
@@ -160,9 +161,9 @@ def _merge_device_dicts(realtime_device_dict: Dict[str, WOL_Device],
 
     return merged_dict
 
-def _clean_cache(current_cache: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
+def _clean_cache(current_cache: Dict[str, _WOL_Device]) -> Dict[str, _WOL_Device]:
     today = datetime.date.today()
-    updated_cache: Dict[str, WOL_Device] = {}
+    updated_cache: Dict[str, _WOL_Device] = {}
     for mac, entry in current_cache.items():
         modified = datetime.datetime.strptime(entry.modified, '%Y-%m-%d').date()
         if (today - modified).days > 7:
@@ -178,7 +179,7 @@ def _clean_cache(current_cache: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
         
     return updated_cache
 
-def _retrieve_lan_devices() -> Dict[str, WOL_Device]:
+def _retrieve_lan_devices() -> Dict[str, _WOL_Device]:
     LOGGER.info('  - Scan for current online devices')
     spinner = Spinner('    ARP Broadcast scan ', spinner=SpinnerType.BALL_BOUNCER, show_elapsed=True)
 
@@ -186,10 +187,10 @@ def _retrieve_lan_devices() -> Dict[str, WOL_Device]:
     lan_list: List[LAN_Client] = []
     lan_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True)
     today = str(datetime.date.today())
-    wol_lan_dict: Dict[str, WOL_Device] = {}
+    wol_lan_dict: Dict[str, _WOL_Device] = {}
     for entry in lan_list:
         if entry.hostname is not None and not entry.hostname.startswith('-> '):
-            device = WOL_Device(name=entry.hostname, ip=entry.ip, mac=entry.mac, modified=today)
+            device = _WOL_Device(name=entry.hostname, ip=entry.ip, mac=entry.mac, modified=today)
             wol_lan_dict[entry.mac] = device
     spinner.stop_spinner()
 
