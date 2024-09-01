@@ -58,8 +58,8 @@ class WOL_Device():
     modified: datetime.date
 
 
-def lookup_mac_entry(device_id: str) -> WOL_Device:
-    cached_mac_dict = retrieve_device_dict()
+def _lookup_mac_entry(device_id: str) -> WOL_Device:
+    cached_mac_dict = _retrieve_device_dict()
     # found_entry = {'name': '', 'ip': '', 'mac': ''}
     found_entry = None
     for entry in cached_mac_dict.values():
@@ -68,7 +68,7 @@ def lookup_mac_entry(device_id: str) -> WOL_Device:
             break
     return found_entry
 
-def print_device_dict(device_dict: Dict[str, WOL_Device]):
+def _print_device_dict(device_dict: Dict[str, WOL_Device]):
     LOGGER.info("")
     LOGGER.info('Mac                IP               Name')
     LOGGER.info('-----------------  ---------------  -----------------------------------------')
@@ -90,7 +90,7 @@ def print_device_dict(device_dict: Dict[str, WOL_Device]):
     LOGGER.info('')
     LOGGER.info(f'{len(device_dict.keys())} device entries.')
 
-def save_device_dict(device_dict: Dict[str, WOL_Device]) -> bool:
+def _save_device_dict(device_dict: Dict[str, WOL_Device]) -> bool:
     LOGGER.info('  - Save updated device list')
     MAC_INFO_LOCATION.with_suffix(".json.5").unlink(missing_ok = True)
     for i in range(4,0,-1):
@@ -108,7 +108,7 @@ def save_device_dict(device_dict: Dict[str, WOL_Device]) -> bool:
     LOGGER.info(f'    {len(device_dict.keys())} entries saved to {MAC_INFO_LOCATION}.')
     return True
 
-def retrieve_device_dict() -> Dict[str, WOL_Device]:
+def _retrieve_device_dict() -> Dict[str, WOL_Device]:
     device_dict: Dict[str, WOL_Device] = {}
     if MAC_INFO_LOCATION.exists():
         LOGGER.debug(f'loading device dict: {MAC_INFO_LOCATION}')
@@ -121,7 +121,7 @@ def retrieve_device_dict() -> Dict[str, WOL_Device]:
     LOGGER.info(f'  - Retrieved cached device list. {len(device_dict.keys())} entries loaded.')
     return device_dict
 
-def merge_device_dicts(realtime_device_dict: Dict[str, WOL_Device], 
+def _merge_device_dicts(realtime_device_dict: Dict[str, WOL_Device], 
                        cached_device_dict: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
     
     LOGGER.info('  - Build cache')
@@ -160,7 +160,7 @@ def merge_device_dicts(realtime_device_dict: Dict[str, WOL_Device],
 
     return merged_dict
 
-def clean_cache(current_cache: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
+def _clean_cache(current_cache: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
     today = datetime.date.today()
     updated_cache: Dict[str, WOL_Device] = {}
     for mac, entry in current_cache.items():
@@ -178,7 +178,7 @@ def clean_cache(current_cache: Dict[str, WOL_Device]) -> Dict[str, WOL_Device]:
         
     return updated_cache
 
-def retrieve_lan_devices() -> Dict[str, WOL_Device]:
+def _retrieve_lan_devices() -> Dict[str, WOL_Device]:
     LOGGER.info('  - Scan for current online devices')
     spinner = Spinner('    ARP Broadcast scan ', spinner=SpinnerType.BALL_BOUNCER, show_elapsed=True)
 
@@ -197,24 +197,24 @@ def retrieve_lan_devices() -> Dict[str, WOL_Device]:
     return wol_lan_dict
 
 
-def device_scan() -> bool:
-    realtime_device_dict = retrieve_lan_devices()
-    cached_device_dict = retrieve_device_dict()
-    merged_device_dict = merge_device_dicts(realtime_device_dict, cached_device_dict)
-    if not dicts_equal(cached_device_dict, merged_device_dict):
-        save_device_dict(merged_device_dict)
+def _device_scan() -> bool:
+    realtime_device_dict = _retrieve_lan_devices()
+    cached_device_dict = _retrieve_device_dict()
+    merged_device_dict = _merge_device_dicts(realtime_device_dict, cached_device_dict)
+    if not _dicts_equal(cached_device_dict, merged_device_dict):
+        _save_device_dict(merged_device_dict)
     return True
 
-def clean_device_cache() -> bool:
-    realtime_device_dict = retrieve_lan_devices()
-    cached_device_dict = retrieve_device_dict()
-    merged_device_dict = merge_device_dicts(realtime_device_dict, cached_device_dict)
-    updated_cache = clean_cache(merged_device_dict)
-    if not dicts_equal(updated_cache, cached_device_dict):
-        save_device_dict(updated_cache)
+def _clean_device_cache() -> bool:
+    realtime_device_dict = _retrieve_lan_devices()
+    cached_device_dict = _retrieve_device_dict()
+    merged_device_dict = _merge_device_dicts(realtime_device_dict, cached_device_dict)
+    updated_cache = _clean_cache(merged_device_dict)
+    if not _dicts_equal(updated_cache, cached_device_dict):
+        _save_device_dict(updated_cache)
     return True
 
-def dicts_equal(d1: dict, d2: dict) -> bool:
+def _dicts_equal(d1: dict, d2: dict) -> bool:
     are_equal = False
     if len(d1.keys()) == len(d2.keys()):
         shared_items = {k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]}
@@ -275,7 +275,7 @@ def main() -> int:
         if not success:
             LOGGER.error(f'- Unable to send to host: {wol.status_message}')
             LOGGER.info('- Attempt to lookup host in cache...')
-            mac_entry = lookup_mac_entry(host)
+            mac_entry = _lookup_mac_entry(host)
             if mac_entry is not None:
                 LOGGER.info(f'  - {host} resolves to {mac_entry.mac}/{mac_entry.ip}')
                 LOGGER.info(f'Sending WOL to {console.cwrap(mac_entry.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ', end=end_tag, flush=True)
@@ -285,17 +285,17 @@ def main() -> int:
 
     elif args.list:
         LOGGER.warning('Display device list')
-        device_dict = retrieve_device_dict()
-        print_device_dict(device_dict)
+        device_dict = _retrieve_device_dict()
+        _print_device_dict(device_dict)
         success = True
 
     elif args.scan:
         LOGGER.warning('Device Scan requested')
-        success = device_scan()
+        success = _device_scan()
 
     elif args.clean:
         LOGGER.warning('Cache clean requested')
-        success = clean_device_cache()
+        success = _clean_device_cache()
 
     elif args.delete:
         LOGGER.error('Cache delete requested')
@@ -303,7 +303,7 @@ def main() -> int:
             LOGGER.warning('- Removing existing cache')
             MAC_INFO_LOCATION.unlink(missing_ok=True)
             LOGGER.warning('Rebuild cache')
-            success = device_scan()
+            success = _device_scan()
 
     LOGGER.info('')
     if success:

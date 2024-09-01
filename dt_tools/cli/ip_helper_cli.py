@@ -1,5 +1,6 @@
 """
 Retrieve IP Information and manage IP Helper data cache.
+
 """
 import argparse
 import json
@@ -31,20 +32,20 @@ def _display_loop_prelude():
     LOGGER.info('q              Quit.')
     LOGGER.info('')
 
-def display_ip_info(ip_info: IpHelper, ip: str, show_all: bool = True, bypass_cache: bool = False):
+def _display_ip_info(ip_info: IpHelper, ip: str, show_all: bool = True, bypass_cache: bool = False):
     if nh.ping(ip):
         info_json = ip_info.get_ip_info(ip, bypass_cache=bypass_cache)
         if info_json.get('error'):
-            display_error(info_json)
+            _display_error(info_json)
         else:
             ip_info.list_cache(ip) 
     else:
         print(f'- {console.cwrap(ip, fg=ColorFG.RED,style=[TextStyle.BOLD, TextStyle.ITALIC])} is not pingable.  Valid host?')
 
-def display_error(error_dict: dict):
+def _display_error(error_dict: dict):
     print(f'- {json.dumps(error_dict, indent=2)}')
 
-def command_loop(ip_info: IpHelper):
+def _command_loop(ip_info: IpHelper):
     _display_loop_prelude()
     c_IP = f"Enter {console.cwrap('IP', ColorFG.WHITE2, style=TextStyle.BOLD)} [b]ypass cache" 
     c_CLEAR = f"{console.cwrap('(c)', ColorFG.WHITE2, style=TextStyle.BOLD)}lear cache [ip]" 
@@ -95,7 +96,7 @@ def command_loop(ip_info: IpHelper):
                 if len(token) == 2 and token[1] in ['B', 'b']:
                     LOGGER.warning('  Bypass requested.')
                     bypass_cache = True
-                display_ip_info(ip_info, token[0], show_all=True, bypass_cache=bypass_cache)
+                _display_ip_info(ip_info, token[0], show_all=True, bypass_cache=bypass_cache)
         
         token = ''
         while len(token) == 0:
@@ -135,11 +136,11 @@ def main():
         if args.ip:
             LOGGER.debug(f'Cache loaded with {len(ip_helper._cache)} entries.')
             LOGGER.debug('')
-            display_ip_info(ip_helper, args.ip, show_all=True)
+            _display_ip_info(ip_helper, args.ip, show_all=True)
         else:
             LOGGER.info(f'Cache loaded with {len(ip_helper._cache)} entries.')
             LOGGER.info('')
-            command_loop(ip_helper)
+            _command_loop(ip_helper)
 
 if __name__ == "__main__":
     main()

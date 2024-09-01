@@ -11,10 +11,12 @@ you may manually identify by updating ~/.IpHelper/mac_info.json,
 which is keyed by mac address.
 
 For example, entry below identifies Ring Doorbell:
+  .. code-block:: json
+
     {
         "XX:XX:XX:XX:XX:XX": {
-            "vendor": "Amazon Technologies Inc.",
-            "hostname": "Kitchen.Echo"
+            "vendor": "Amazon Technologies Inc.",  
+            "hostname": "Kitchen.Echo"  
         },
     }
 
@@ -119,7 +121,7 @@ def _dump_resolved_hosts_to_file(out_filename: str) -> bool:
         console.print(f'Dump file: {fh.absolute()} created.')
         success = True
     except Exception as ex: 
-        LOGGER.exception(f'Unable to create {fh.absolute()}')
+        LOGGER.exception(f'Unable to create {fh.absolute()} {repr(ex)}')
 
     return success
 

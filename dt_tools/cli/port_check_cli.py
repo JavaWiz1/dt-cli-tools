@@ -5,7 +5,8 @@ Syntax:
 
     port-check [-h] [-i filename] [-c] [-w secs] [-v] [-o] [connection]
 
-    where:
+    Where:
+
     - -h: show help screen
     - -i: hosts list in filename provided
     - -c: list common port numbers and descriptions
@@ -15,11 +16,12 @@ Syntax:
     - connenction: target in format hostname:port (see below)
 
     The port parameter can be one (or a combination) of below formats:
-    80          check for single open port 80 on myHost
-    80,443      check for open ports 80 and 443 on myHost
-    20-40       check for open ports 20 thru 40 on myHost
-    80,20-44    check for open ports 80 and 20 thru 44 on myHost
-    common      the string, check for all common ports
+
+    - 80          check for single open port 80 on myHost
+    - 80,443      check for open ports 80 and 443 on myHost
+    - 20-40       check for open ports 20 thru 40 on myHost
+    - 80,20-44    check for open ports 80 and 20 thru 44 on myHost
+    - common      the string, check for all common ports
         
     Connection strings may also be loaded into a text file to be processed by
     using the -i command line parameter.
@@ -28,9 +30,9 @@ Returns:
     
     int: Return code
     
-    0       if all connections are successful
-    1-999   the number of un-successful connections
-    1000+   parameter or data issue, see console message
+    - 0       if all connections are successful
+    - 1-999   the number of un-successful connections
+    - 1000+   parameter or data issue, see console message
 
     """
 import argparse
