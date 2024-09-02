@@ -2,7 +2,7 @@ import argparse
 import sys
 
 import dt_tools.logger.logging_helper as lh
-from dt_tools.console.console_helper import ColorFG, TextStyle
+from dt_tools.console.console_helper import TextStyle
 from dt_tools.console.console_helper import ConsoleHelper as console
 from dt_tools.os.project_helper import ProjectHelper
 from dt_tools.os.sound import Accent, Sound
