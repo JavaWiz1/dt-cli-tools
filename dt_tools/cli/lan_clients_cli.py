@@ -1,28 +1,55 @@
 """
-lan_clients
-
 Create report of all identified clients on local network.
 
 Entries are identified thru Address Resolution Protocal (ARP) cache or broadcast.
 Default approach is ARP cache, however Broadcast (-b parameter) is more thorough, but takes more time.
 
-For devices that are only identified by their IP and MAC address (ie. hostname not resolvable),
-you may manually identify by updating ~/.IpHelper/mac_info.json, 
-which is keyed by mac address.
 
-For example, entry below identifies Ring Doorbell:
-  .. code-block:: json
+**Features**:
 
-    {
-        "XX:XX:XX:XX:XX:XX": {
-            "vendor": "Amazon Technologies Inc.",  
-            "hostname": "Kitchen.Echo"  
-        },
-    }
+  - Identifies LAN Clients and displays associated details:
 
-and will be displayed as:
+    - IP Address
+    - Hostname
+    - MAC Address
+    - MAC Vendor
+  - Uses ARP Cache or ARP Broadcast to identify clients
+  - Can output results into a pipe '|' delimited file 
 
-192.168.21.99    -> Kitchen.Echo               XX:XX:XX:XX:XX:XX  Amazon Technologies Inc.
+**Usage**:
+
+  lan-clients [-h] [-o filename] [-b] [-v]
+
+  Parameters:
+
+  - -h help
+  - -o filename: output file for pipe '|' delimited output data.
+  - -b Use Broadcast ARP ping (insteac of ARP cache) to identify clients.
+  - -v Verbose logging
+
+**Note**::
+
+    For devices that are only identified by their IP and MAC address (ie. hostname not resolvable),
+    you may manually identify by updating ~/.IpHelper/mac_info.json, 
+    which is keyed by mac address.
+
+    Example entry below identifies Ring Doorbell-
+
+        {
+            "XX:XX:XX:XX:XX:XX": {
+                "vendor": "Amazon Technologies Inc.",  
+                "hostname": "Kitchen.Echo"  
+            },
+        }
+
+    and will be displayed as:
+
+    192.168.21.99    -> Kitchen.Echo               XX:XX:XX:XX:XX:XX  Amazon Technologies Inc.
+
+  
+**Returns**:
+
+    int: number of client devices identified on LAN.
 
 """
 import argparse
@@ -68,6 +95,7 @@ def _build_queue(load_via_broadcast: bool = False) -> int:
     
     spinner.stop_spinner()
     console.print(f'{console.cwrap(len(client_list),ColorFG.WHITE)} clients identified via ({console.cwrap(search_type, ColorFG.WHITE)}) in {spinner.elapsed_time}.')
+    return len(client_list)
 
 def _queue_item_worker(name: str):
     lan_entry: LAN_Client
@@ -132,7 +160,7 @@ def _signal_handler(signum, frame):
 
 signal.signal(signal.SIGINT, _signal_handler)
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawDescriptionHelpFormatter
     parser.description = "lan-clients - find clients on network."
@@ -142,7 +170,7 @@ def main():
                             help='Use ARP Broadcast vs Cache to identify clients')
     parser.add_argument('-v', '--verbose', action='count', default=0,
                             help='Enable verbose console messages')
-
+    rc = 0
     args = parser.parse_args()
     if args.verbose == 0:
         log_lvl = "INFO"
@@ -157,14 +185,14 @@ def main():
     console.print_line_separator(f'{parser.prog} {version}', 80)
     console.print('')
     start = time.time()
-    _ = _build_queue(args.broadcast)
+    num_clients = _build_queue(args.broadcast)
     _process_queue()
     if args.output:
         _dump_resolved_hosts_to_file(args.output)
     
     elapsed = f'{time.time() - start:.2f}'
     console.print(f'Total elapsed time {console.cwrap(elapsed, ColorFG.WHITE2, style=TextStyle.BOLD)} seconds.')
-
+    return num_clients
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

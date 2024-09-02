@@ -1,5 +1,5 @@
 """
-Send Wake-on-LAN (WOL) packet to device.
+Send **Wake-on-LAN (WOL)** packet to device.
 
 WOL is a standard for Ethernet and Token-Ring which allows a computer to be 
 turned on or awakened from sleep-mode via a network message.
@@ -11,18 +11,33 @@ This module allows the user to send WOL to hostnames and IPs in addition to
 the MAC address.  This is accomplished by leveraging a cache that this program
 maintains which relates the MAC to IP and hostname.
 
-Cache commands:
+**Usage**:
+    
+    wol-cli [-h] (-m MAC | -n NAME | -i IP | -l | -s | -c | -d) [-t TIMEOUT] [-v]
 
-  - -s Scan for new devices to 'seed' or update the cache run.  
-  - -l List the contents of the cache to the terminal.
-  - -c Clean/purge cache of stale entries (devices that have not been online in 7 or more days).
+    Where parameters are:
+  
+    - -h show this help message and exit
+    - -m MAC Wake via MAC Address
+    - -n NAME Wake via Hostname
+    - -i IP Wake via IP Address
+    - -t TIMEOUTSeconds to wait for device to come online
+    - -v Verbose logging    
+
+    Cache control commands:
+
+    - -s Scan for new devices to 'seed' or update the cache run.  
+    - -l List the contents of the cache to the terminal.
+    - -c Clean/purge cache of stale entries (devices that have not been online in 7 or more days).
+    - -d Delete cache and re-create
 
 Note::
 
-The scan (-s) operation should be done on a regular basis.  This will keep the cache 
-updated with the most recent online devices, their hostnames and IPs.
+    The scan (-s) operation should be done on a regular basis.  This will keep the cache 
+    updated with the most recent online devices, their hostnames and IPs.
 
 Returns:
+
     int: True if WOL packet sent succesfully else False
 
 """

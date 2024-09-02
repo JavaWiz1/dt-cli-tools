@@ -1,11 +1,16 @@
 """
-This module checks for open[/closed] ports on target host(s).
+This module checks for open[/closed] ports on target host(s).  
 
-Syntax:
+**Features**:
+
+- Check a port, a list of ports, range of ports or common ports
+- Limit output to only show open ports
+- Check multiple hosts via an input file of hostnames(and ports)
+- Threaded to improve performance for large number of ports
+
+**Usage**:
 
     port-check [-h] [-i filename] [-c] [-w secs] [-v] [-o] [connection]
-
-    Where:
 
     - -h: show help screen
     - -i: hosts list in filename provided
@@ -26,7 +31,7 @@ Syntax:
     Connection strings may also be loaded into a text file to be processed by
     using the -i command line parameter.
 
-Returns:
+**Returns**:
     
     int: Return code
     

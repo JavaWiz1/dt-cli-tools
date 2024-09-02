@@ -1,5 +1,32 @@
 """
-Retrieve IP Information and manage IP Helper data cache.
+Retrieve IP information on Local and Internet IP addresses.  
+
+This utility interfaces with the free **ipinfo.io** site.  The ipinfo.io site
+requires a user token which is free.
+
+  - See 'setting up user token' (https://htmlpreview.github.io/?https://github.com/JavaWiz1/dt-net/blob/develop/docs/html/dt_tools.net.ip_info_helper.html) in docs for information on aquiring and setting up token.
+
+**Features**:
+
+    - IP Cache for to increase perfomance and and limit calls to ipinfo.io
+    - Command line interface, or console prompt menu.
+    - Commands to manage cache (list, clean, search,...)
+    - Cached IP entry will auto-refresh if it is more than 48 hours old.
+
+**Usage**:
+
+    ip-helper [-h] [-c] [-l] [-v] [ip [b]]
+
+    Parameters:
+
+      - -h Help
+      - -c [ip]: Clear ip from cache, or clear whole cache if IP not specified.
+      - -l [ip]: List IP info from cache, or all cache entries
+      - -v Verbose output
+      - optional ip address to lookup (optional 'b' parm will bypass cache and re-lookup at ipinfo.io)
+      
+        - If ip is supplied, it will be looked up and info will be displayed.
+        - If ip is NOT supplied, a prompt menu will be displayed for user input. 
 
 """
 import argparse
@@ -144,4 +171,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    sys.exit()
+    sys.exit(0)
