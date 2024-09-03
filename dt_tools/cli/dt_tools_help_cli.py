@@ -1,16 +1,32 @@
+"""
+List dt_tools cli programs installed and optionally display help.
+
+**Features**:
+
+    - Identifies and lists dt-tools-cli entrypoints that are installed
+    - Prints help for any specific tool requested
+
+**Usage**:
+
+    dt-tools-help [program] 
+
+    - If no program specified, a list of all dt-tools will be presented
+    - If program specified, the modules help page will be presennted.
+
+"""
 import importlib as il
 import importlib.metadata as im
+import re
 import sys
 from argparse import ArgumentParser
 from typing import List
-import dt_tools.logger.logging_helper as lh
-from dt_tools.os.project_helper import ProjectHelper
+
 from loguru import logger as LOGGER
-import re
-from dt_tools.console.console_helper import ConsoleHelper as console
+
+import dt_tools.logger.logging_helper as lh
 from dt_tools.console.console_helper import ColorFG, TextStyle
-
-
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.os.project_helper import ProjectHelper
 
 _DT_PACKAGE = 'dt_tools.cli'
 _DT_DISTRIBUTION = 'dt-cli-tools'
