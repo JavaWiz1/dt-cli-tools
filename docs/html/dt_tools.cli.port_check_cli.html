@@ -46,14 +46,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="dt_tools.html">dt_tools namespace</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="dt_tools.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3 current"><a class="reference internal" href="dt_tools.cli.html">dt_tools.cli namespace</a><ul class="current">
-<li class="toctree-l4 current"><a class="reference internal" href="dt_tools.cli.html#submodules">Submodules</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l1 current"><a class="reference internal" href="dt_tools.cli.html">dt_tools.cli namespace</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dt_tools.cli.ip_helper_cli.html">dt_tools.cli.ip_helper_cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dt_tools.cli.lan_clients_cli.html">dt_tools.cli.lan_clients_cli module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">dt_tools.cli.port_check_cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dt_tools.cli.wol_cli.html">dt_tools.cli.wol_cli module</a></li>
 </ul>
 </li>
 </ul>
@@ -72,7 +69,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="dt_tools.html">dt_tools namespace</a></li>
           <li class="breadcrumb-item"><a href="dt_tools.cli.html">dt_tools.cli namespace</a></li>
       <li class="breadcrumb-item active">dt_tools.cli.port_check_cli module</li>
       <li class="wy-breadcrumbs-aside">
@@ -87,10 +83,16 @@
   <section id="module-dt_tools.cli.port_check_cli">
 <span id="dt-tools-cli-port-check-cli-module"></span><h1>dt_tools.cli.port_check_cli module<a class="headerlink" href="#module-dt_tools.cli.port_check_cli" title="Link to this heading"></a></h1>
 <p>This module checks for open[/closed] ports on target host(s).</p>
-<p>Syntax:</p>
+<p><strong>Features</strong>:</p>
+<ul class="simple">
+<li><p>Check a port, a list of ports, range of ports or common ports</p></li>
+<li><p>Limit output to only show open ports</p></li>
+<li><p>Check multiple hosts via an input file of hostnames(and ports)</p></li>
+<li><p>Threaded to improve performance for large number of ports</p></li>
+</ul>
+<p><strong>Usage</strong>:</p>
 <blockquote>
 <div><p>port-check [-h] [-i filename] [-c] [-w secs] [-v] [-o] [connection]</p>
-<p>Where:</p>
 <ul class="simple">
 <li><p>-h: show help screen</p></li>
 <li><p>-i: hosts list in filename provided</p></li>
@@ -111,19 +113,15 @@
 <p>Connection strings may also be loaded into a text file to be processed by
 using the -i command line parameter.</p>
 </div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Return code</p>
+<p><strong>Returns</strong>:</p>
+<blockquote>
+<div><p>int: Return code</p>
 <ul class="simple">
 <li><p>0       if all connections are successful</p></li>
 <li><p>1-999   the number of un-successful connections</p></li>
 <li><p>1000+   parameter or data issue, see console message</p></li>
 </ul>
-</dd>
-<dt class="field-even">rtype<span class="colon">:</span></dt>
-<dd class="field-even"><p>int</p>
-</dd>
-</dl>
+</div></blockquote>
 <dl class="py function">
 <dt class="sig sig-object py" id="dt_tools.cli.port_check_cli.main">
 <span class="sig-prename descclassname"><span class="pre">dt_tools.cli.port_check_cli.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/dt_tools/cli/port_check_cli.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dt_tools.cli.port_check_cli.main" title="Link to this definition"></a></dt>

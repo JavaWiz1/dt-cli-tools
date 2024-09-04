@@ -46,14 +46,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="dt_tools.html">dt_tools namespace</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="dt_tools.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3 current"><a class="reference internal" href="dt_tools.cli.html">dt_tools.cli namespace</a><ul class="current">
-<li class="toctree-l4 current"><a class="reference internal" href="dt_tools.cli.html#submodules">Submodules</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l1 current"><a class="reference internal" href="dt_tools.cli.html">dt_tools.cli namespace</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">dt_tools.cli.ip_helper_cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dt_tools.cli.lan_clients_cli.html">dt_tools.cli.lan_clients_cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dt_tools.cli.port_check_cli.html">dt_tools.cli.port_check_cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dt_tools.cli.wol_cli.html">dt_tools.cli.wol_cli module</a></li>
 </ul>
 </li>
 </ul>
@@ -72,7 +69,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="dt_tools.html">dt_tools namespace</a></li>
           <li class="breadcrumb-item"><a href="dt_tools.cli.html">dt_tools.cli namespace</a></li>
       <li class="breadcrumb-item active">dt_tools.cli.ip_helper_cli module</li>
       <li class="wy-breadcrumbs-aside">
@@ -86,7 +82,42 @@
              
   <section id="module-dt_tools.cli.ip_helper_cli">
 <span id="dt-tools-cli-ip-helper-cli-module"></span><h1>dt_tools.cli.ip_helper_cli module<a class="headerlink" href="#module-dt_tools.cli.ip_helper_cli" title="Link to this heading"></a></h1>
-<p>Retrieve IP Information and manage IP Helper data cache.</p>
+<p>Retrieve IP information on Local and Internet IP addresses.</p>
+<p>This utility interfaces with the free <strong>ipinfo.io</strong> site.  The ipinfo.io site
+requires a user token which is free.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>See ‘setting up user token’ (<a class="reference external" href="https://htmlpreview.github.io/?https://github.com/JavaWiz1/dt-net/blob/develop/docs/html/dt_tools.net.ip_info_helper.html">https://htmlpreview.github.io/?https://github.com/JavaWiz1/dt-net/blob/develop/docs/html/dt_tools.net.ip_info_helper.html</a>) in docs for information on aquiring and setting up token.</p></li>
+</ul>
+</div></blockquote>
+<p><strong>Features</strong>:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>IP Cache for to increase perfomance and and limit calls to ipinfo.io</p></li>
+<li><p>Command line interface, or console prompt menu.</p></li>
+<li><p>Commands to manage cache (list, clean, search,…)</p></li>
+<li><p>Cached IP entry will auto-refresh if it is more than 48 hours old.</p></li>
+</ul>
+</div></blockquote>
+<p><strong>Usage</strong>:</p>
+<blockquote>
+<div><p>ip-helper [-h] [-c] [-l] [-v] [ip [b]]</p>
+<p>Parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>-h Help</p></li>
+<li><p>-c [ip]: Clear ip from cache, or clear whole cache if IP not specified.</p></li>
+<li><p>-l [ip]: List IP info from cache, or all cache entries</p></li>
+<li><p>-v Verbose output</p></li>
+<li><p>optional ip address to lookup (optional ‘b’ parm will bypass cache and re-lookup at ipinfo.io)</p>
+<ul>
+<li><p>If ip is supplied, it will be looked up and info will be displayed.</p></li>
+<li><p>If ip is NOT supplied, a prompt menu will be displayed for user input.</p></li>
+</ul>
+</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
 <dl class="py function">
 <dt class="sig sig-object py" id="dt_tools.cli.ip_helper_cli.main">
 <span class="sig-prename descclassname"><span class="pre">dt_tools.cli.ip_helper_cli.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/dt_tools/cli/ip_helper_cli.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dt_tools.cli.ip_helper_cli.main" title="Link to this definition"></a></dt>
