@@ -35,6 +35,7 @@ dt-help = 'dt_tools.cli.dt_tools_help_cli:main'
 ip-helper = 'dt_tools.cli.ip_helper_cli:main'
 lan-clients = 'dt_tools.cli.lan_clients_cli:main'
 port-check = 'dt_tools.cli.port_check_cli:main'
+set-iphelper-token = 'dt_tools.cli.set_iphelper_token_cli:main'
 speak = 'dt_tools.cli.speak_cli.py:main'
 wol-cli = 'dt_tools.cli.wol_cli:main'
 

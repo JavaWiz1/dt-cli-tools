@@ -25,7 +25,8 @@ from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
 from dt_tools.console.console_helper import ColorFG, TextStyle
-from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import ConsoleHelper as con
+from dt_tools.misc.helpers import StringHelper as sh
 from dt_tools.os.project_helper import ProjectHelper
 
 _DT_PACKAGE = 'dt_tools.cli'
@@ -33,25 +34,12 @@ _DT_DISTRIBUTION = 'dt-cli-tools'
 
 _VERSION = '' 
 
-def _list_entrypoints():
-    eyecatcher = f'dt_tools Help   ({_DT_PACKAGE} v{_VERSION})' 
-    LOGGER.info(eyecatcher)
-    LOGGER.info('-'*len(eyecatcher))
-    LOGGER.info('')
-    LOGGER.info('EntryPoint      Module')
-    LOGGER.info('--------------- ------------------------------------')
-    entrypoints = im.entry_points()
-    for ep in entrypoints.select(group='console_scripts'):
-        if _DT_PACKAGE in ep.module:
-            LOGGER.debug(ep)
-            LOGGER.info(f'{ep.name:15} {ep.module}') 
-
 def _replace_md(line: str, re_pattern: str, fg: ColorFG, style: List[TextStyle]) -> str:
     keywords = re.findall(re_pattern, line)
     if len(keywords) > 0:
         for key in keywords:
             token = f'**{key}**'
-            line = line.replace(token, console.cwrap(key, fg=fg, style=style))
+            line = line.replace(token, con.cwrap(key, fg=fg, style=style))
     return line
 
 def _replace_markdown(line: str) -> str:
@@ -64,7 +52,7 @@ def _replace_markdown(line: str) -> str:
 
 
 def _display_module_help(pgm_name: str):
-    eyecatcher = f'{console.cwrap(pgm_name,fg=ColorFG.WHITE2, style=[TextStyle.BOLD])}   (v{_VERSION})'
+    eyecatcher = f'{con.cwrap(pgm_name,fg=ColorFG.WHITE2, style=[TextStyle.BOLD])}   (v{_VERSION})'
     LOGGER.info(eyecatcher)
     LOGGER.info('-'*len(eyecatcher))
 
@@ -88,6 +76,22 @@ def _display_module_help(pgm_name: str):
         except Exception as ex:
             LOGGER.error(f'- {pgm_name} not found.  {repr(ex)}')
 
+def _list_entrypoints():
+    version = f'{_DT_PACKAGE} {con.cwrap(f"v{_VERSION}",fg=ColorFG.WHITE2, style=[TextStyle.BOLD, TextStyle.ITALIC])}'
+    eyecatcher = f'dt_tools Help   ({version})' 
+    con.print_line_separator(' ', 80)
+    con.print_line_separator(eyecatcher, 80)
+    # LOGGER.info(eyecatcher)
+    # LOGGER.info('-'*len(eyecatcher))
+    LOGGER.info('')
+    con.print(f'{con.cwrap(sh.pad_r("EntryPoint",15),style=TextStyle.UNDERLINE)} {con.cwrap(sh.pad_r("Module",35),style=TextStyle.UNDERLINE)}')
+    # LOGGER.info('EntryPoint      Module')
+    # LOGGER.info('--------------- ------------------------------------')
+    entrypoints = im.entry_points()
+    for ep in entrypoints.select(group='console_scripts'):
+        if _DT_PACKAGE in ep.module:
+            LOGGER.debug(ep)
+            LOGGER.info(f'{ep.name:15} {ep.module:35} {ep}') 
 
 def main() -> int:
     epilog = 'With no program argument, display a list of entrypoints.\nWith program argument, display help info.'
