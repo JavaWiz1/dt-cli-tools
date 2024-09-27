@@ -1,4 +1,45 @@
+"""
+This module checks for open[/closed] ports on target host(s).  
 
+**Features**:
+
+- Check a port, a list of ports, range of ports or common ports
+- Limit output to only show open ports
+- Check multiple hosts via an input file of hostnames(and ports)
+- Threaded to improve performance for large number of ports
+
+**Usage**:
+
+    port-check [-h] [-i filename] [-c] [-w secs] [-v] [-o] [connection]
+
+    - -h: show help screen
+    - -i: hosts list in filename provided
+    - -c: list common port numbers and descriptions
+    - -w: number of seconds to wait for connection
+    - -v: verbose logging
+    - -o: only show open connections
+    - connenction: target in format hostname:port (see below)
+
+    The port parameter can be one (or a combination) of below formats:
+
+    - 80          check for single open port 80 on myHost
+    - 80,443      check for open ports 80 and 443 on myHost
+    - 20-40       check for open ports 20 thru 40 on myHost
+    - 80,20-44    check for open ports 80 and 20 thru 44 on myHost
+    - common      the string, check for all common ports
+        
+    Connection strings may also be loaded into a text file to be processed by
+    using the -i command line parameter.
+
+**Returns**:
+    
+    int: Return code
+    
+    - 0       if all connections are successful
+    - 1-999   the number of un-successful connections
+    - 1000+   parameter or data issue, see console message
+
+    """
 import argparse
 import concurrent.futures
 import pathlib
@@ -13,16 +54,31 @@ import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
 from dt_tools.os.os_helper import OSHelper
 from dt_tools.os.project_helper import ProjectHelper
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import ColorFG, TextStyle
+
 
 stop_event = threading.Event()
+
+def _sub_list(in_list: list, cols: int) -> list:
+    final = [in_list[i * cols:(i + 1) * cols] for i in range((len(in_list) + cols - 1) // cols )] 
+    return final
+
 
 def _list_common_ports():
     LOGGER.info('Common Ports')
     LOGGER.info('')
-    LOGGER.info('  Port  Description')
-    LOGGER.info('  ----- -------------')
-    for p_name, port in net_helper.COMMON_PORTS.items():
-        LOGGER.info(f'  {port:5d} {p_name}')
+    LOGGER.info('  Port  Description           Port  Description           Port  Description')
+    LOGGER.info('  ----- --------------------  ----- --------------------  ----- --------------------')
+    chunks = _sub_list(list(net_helper.COMMON_PORTS.items()), 3)
+    for item in chunks:
+        p1_name = item[0][0]
+        port1   = f'{item[0][1]:5d}'.lstrip('0') if len(item) > 0 else ''
+        p2_name = item[1][0] if len(item) > 1 else ''
+        port2   = f'{item[1][1]:5d}'.lstrip('0') if len(item) > 1 else ''
+        p3_name = item[2][0] if len(item) > 2 else ''
+        port3   = f'{item[2][1]:5d}'.lstrip('0') if len(item) > 2 else ''
+        LOGGER.info(f'  {port1:5} {p1_name:20}  {port2:5} {p2_name:20}  {port3:5} {p3_name:20}')
 
 def _process_host_file(input_filename: str, wait: float = 1.0, only_open: bool = False) -> int:
     LOGGER.debug(f'_process_host_file() - {input_filename}')
@@ -54,7 +110,7 @@ def _extract_ports(ports_string: str) -> List[int]:
             token = port.split('-')
             if len(token) == 1:
                 if token[0].isdigit():
-                    ports.append(token[0])
+                    ports.append(int(token[0]))
                 else:
                     LOGGER.warning(f'{token[0]} Dropped.  Port must be numeric')
             elif len(token) == 2:
@@ -99,10 +155,13 @@ def _process_host_connection(host_connection: str, wait: float = 1.0, only_open:
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_cnt) as executor:
         if num_ports > thread_cnt:
             LOGGER.info('')
-            LOGGER.info(f'Checking {num_ports} ports on {host} with {executor._max_workers} threads.')
+            dsply_ports = console.cwrap(num_ports, fg=ColorFG.WHITE2, style=TextStyle.BOLD)
+            dsply_host = console.cwrap(host, fg=ColorFG.WHITE2, style=TextStyle.BOLD)
+            LOGGER.info(f'Checking {dsply_ports} ports on {dsply_host} with {executor._max_workers} threads.')
+            LOGGER.info('')
         future:concurrent.futures.Future = None
         for port in ports:
-            future = executor.submit(_check_host, host,port,wait,display_closed)
+            future = executor.submit(_check_host, host, port, wait, display_closed)
             futures.append(future)
         for future in futures:
             ret_cd += future.result()
@@ -110,18 +169,20 @@ def _process_host_connection(host_connection: str, wait: float = 1.0, only_open:
             LOGGER.warning('  No open ports detected.')
     return ret_cd
 
-def _check_host(host: str, port: int, wait: float = 1.0, display_closed: bool = True) -> int:
+def _check_host(host: str, port: int, wait: float = 1.5, display_closed: bool = True) -> int:
     host_id = f'{host}:{port}'
+    port_name = net_helper.get_port_name(port)
+    if port_name is None:
+        port_name = ''
     if net_helper.is_port_open(host, port, wait):
         ret_cd = 0
-        port_name = net_helper.get_port_name(port)
-        if port_name is None:
-            port_name = ''            
-        LOGGER.success(f'{host_id:20} open   {port_name}')
+        status = console.cwrap('open  ', fg=ColorFG.GREEN2, style=[TextStyle.BOLD])            
+        LOGGER.info(f'{host_id:20} {status} {port_name}')
     else: 
         ret_cd = 1
         if display_closed:
-            LOGGER.warning(f'{host_id:20} closed')
+            status = console.cwrap('closed', fg=ColorFG.YELLOW2, style=[TextStyle.BOLD])            
+            LOGGER.info(f'{host_id:20} {status} {port_name}')
 
     return ret_cd
 
@@ -147,7 +208,6 @@ def _validate_commandline_args(args: argparse.Namespace):
 
 
 def main():
-    
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawDescriptionHelpFormatter
     parser.description = textwrap.dedent(f'''\
@@ -194,20 +254,20 @@ def main():
         log_level = "DEBUG"
     else:
         log_level = "TRACE"
-    lh.configure_logger(log_level=log_level)
+    lh.configure_logger(log_level=log_level, brightness=False)
 
-    version = ProjectHelper.determine_version('dt-cli-tools')
-    LOGGER.info('='*80)
-    LOGGER.info(f'{parser.prog}  (v{version})')
-    LOGGER.info('='*80)
+    version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), fg=ColorFG.WHITE2, style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
+    console.print_line_separator(' ', 80)
+    console.print_line_separator(f'{parser.prog} {version}', 80)
 
     ret_cd = _validate_commandline_args(args)
     if ret_cd > 0:
-        LOGGER.info('')
+        console.print('')
         parser.print_usage()
         return ret_cd
 
     if args.common:
+        console.print('')
         _list_common_ports()
         return ret_cd
     

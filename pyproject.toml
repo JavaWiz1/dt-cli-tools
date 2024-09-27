@@ -1,7 +1,7 @@
 [tool.poetry]
 package-mode = true 
 name = "dt-cli-tools"
-version = "0.1.3"
+version = "0.1.4"
 description = "Various CLIs created from dt-tools packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
@@ -27,13 +27,17 @@ python = "^3.10"
 dt-misc = "*"
 dt-console = "*"
 dt-net = "*"
+dataclasses-json = "^0.6.7"
 
 
 [tool.poetry.scripts]
-wol-cli = 'dt_tools.cli.wol_cli:main'
-ip-info = 'dt_tools.cli.ip_helper_cli:main'
+dt-help = 'dt_tools.cli.dt_tools_help_cli:main'
+ip-helper = 'dt_tools.cli.ip_helper_cli:main'
 lan-clients = 'dt_tools.cli.lan_clients_cli:main'
 port-check = 'dt_tools.cli.port_check_cli:main'
+set-iphelper-token = 'dt_tools.cli.set_iphelper_token_cli:main'
+speak = 'dt_tools.cli.speak_cli.py:main'
+wol-cli = 'dt_tools.cli.wol_cli:main'
 
 [build-system]
 requires = ["poetry-core"]
