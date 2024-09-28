@@ -1,3 +1,27 @@
+"""
+Speak text from command-line or text file.
+
+**Features**:
+    - Input from command line or file
+    - Selectable accents (see --list option for values)
+    - Control cadence/speed of voice
+
+**Usage**:
+
+    speak_cli.py [-h] [-a ACCENT] [-s {slow,normal,medium,fast,faster,chipmunk}] [-l] [-v] [text ...]
+
+    positional arguments:
+    text                  text (or a filename containing the text) to vocalize.
+
+    options:
+    -h, --help            show this help message and exit
+    -a ACCENT, --accent ACCENT
+                            voice accent key
+    -s {slow,normal,medium,fast,faster,chipmunk}, --speed {slow,normal,medium,fast,faster,chipmunk}
+                            speed or cadences of speech
+    -l, --list            list available accent keys
+    -v, --verbose         verbose mode
+"""
 import argparse
 import sys
 
