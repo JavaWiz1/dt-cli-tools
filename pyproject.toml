@@ -1,7 +1,7 @@
 [tool.poetry]
 package-mode = true 
 name = "dt-cli-tools"
-version = "0.1.4"
+version = "0.1.6"
 description = "Various CLIs created from dt-tools packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
@@ -21,6 +21,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
+
 # dt-misc = {path = "../dt-misc", develop = true }
 # dt-console = {path = "../dt-console", develop = true }
 # dt-net = {path = "../dt-net", develop = true }

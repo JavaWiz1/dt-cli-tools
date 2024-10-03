@@ -59,12 +59,14 @@ import signal
 import sys
 import threading
 import time
+from enum import Enum
 
 import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
-from dt_tools.console.spinner import Spinner
+from dt_tools.console.console_helper import ColorFG
 from dt_tools.console.console_helper import ConsoleHelper as console
-from dt_tools.console.console_helper import ColorFG, TextStyle
+from dt_tools.console.console_helper import TextStyle
+from dt_tools.console.spinner import Spinner
 from dt_tools.net.net_helper import LAN_Client
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
@@ -73,8 +75,29 @@ ip_queue = queue.Queue()
 resolved_queue = queue.SimpleQueue()
 stop_event = threading.Event()
 
+class SORT_KEY(Enum):
+    IP = 1
+    HOSTNAME = 2
+    MAC = 3
+    VENDOR = 4
 
-def _build_queue(load_via_broadcast: bool = False) -> int:
+def sort_by_ip(entry: LAN_Client):
+    ip_tokens = entry.ip.split('.')
+    sort_ip=''
+    for t in ip_tokens:
+        sort_ip += f'{int(t):3d}.'
+    return sort_ip
+
+def sort_by_hostname(entry: LAN_Client):
+    return entry.hostname
+
+def sort_by_mac(entry: LAN_Client):
+    return entry.mac
+
+def sort_by_vendor(entry: LAN_Client):
+    return entry.vendor
+
+def _build_queue(load_via_broadcast: bool = False, sort_key: SORT_KEY = SORT_KEY.IP) -> int:
     # Retrieve clients based on ARP cache
     spinner = Spinner('Searching', show_elapsed=True)
     if load_via_broadcast:
@@ -89,6 +112,19 @@ def _build_queue(load_via_broadcast: bool = False) -> int:
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
     LOGGER.debug(f'{len(client_list)} clients retrieved.')
+    if sort_key == SORT_KEY.IP:
+        client_list.sort(key=sort_by_ip)
+    elif sort_key == SORT_KEY.HOSTNAME:
+        client_list.sort(key=sort_by_hostname)
+    elif sort_key == SORT_KEY.MAC:
+        client_list.sort(key=sort_by_mac)
+    elif sort_key == SORT_KEY.VENDOR:
+        client_list.sort(key=sort_by_vendor)
+    else:
+        LOGGER.warning(f'Unknown sortkey [{sort_key}], default to ip.')
+        # UNknown
+        client_list.sort(key=sort_by_ip)
+
     for client in client_list:
         spinner.caption_suffix('Loading queue.')
         ip_queue.put(client)
@@ -170,6 +206,8 @@ def main() -> int:
                             help='Use ARP Broadcast vs Cache to identify clients')
     parser.add_argument('-l', '--list', action='store_true', default=False,
                             help='List contents of user maintained MAC cache')
+    parser.add_argument('-s', '--sort', choices=['ip','hostname','mac','vendor'], default='ip', 
+                            help='Sort key (default ip)')
     parser.add_argument('-v', '--verbose', action='count', default=0,
                             help='Enable verbose console messages')
     args = parser.parse_args()
@@ -191,7 +229,8 @@ def main() -> int:
         return 0
     
     start = time.time()
-    num_clients = _build_queue(args.broadcast)
+    sort_key = SORT_KEY[args.sort.upper()]
+    num_clients = _build_queue(args.broadcast, sort_key=sort_key)
     _process_queue()
     if args.output:
         _dump_resolved_hosts_to_file(args.output)
