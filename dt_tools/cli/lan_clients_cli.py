@@ -168,9 +168,10 @@ def main() -> int:
                             help='Output file containing resolved hostnames')
     parser.add_argument('-b', '--broadcast', action='store_true', default=False, 
                             help='Use ARP Broadcast vs Cache to identify clients')
+    parser.add_argument('-l', '--list', action='store_true', default=False,
+                            help='List contents of user maintained MAC cache')
     parser.add_argument('-v', '--verbose', action='count', default=0,
                             help='Enable verbose console messages')
-    rc = 0
     args = parser.parse_args()
     if args.verbose == 0:
         log_lvl = "INFO"
@@ -184,6 +185,11 @@ def main() -> int:
     console.print_line_separator(' ', 80)
     console.print_line_separator(f'{parser.prog} {version}', 80)
     console.print('')
+    if args.list:
+        from dt_tools.net.ip_info_helper import IpHelper as ih
+        ih().list_mac_cache()
+        return 0
+    
     start = time.time()
     num_clients = _build_queue(args.broadcast)
     _process_queue()

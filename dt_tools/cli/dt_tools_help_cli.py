@@ -62,15 +62,17 @@ def _display_module_help(pgm_name: str):
         LOGGER.debug(f'- name: {ep.name}  module: {ep.module}')
         if _DT_PACKAGE in ep.module and ep.name == pgm_name:
             module = ep.module
-            LOGGER.debug('FOUND')
+            LOGGER.debug(f'FOUND - {module}')
             break
 
     if module is None:
         LOGGER.warning(f'- {pgm_name} not found.')
     else:
         try:
-            module = il.import_module(module)
-            buffer = module.__doc__.splitlines()
+            mod = il.import_module(module)
+            LOGGER.debug(f'{module} loaded.')
+            buffer = mod.__doc__.splitlines()
+            LOGGER.debug(f'{module} docs loaded.')
             for line in buffer:
                 LOGGER.info(_replace_markdown(line))
         except Exception as ex:
@@ -91,7 +93,7 @@ def _list_entrypoints():
     for ep in entrypoints.select(group='console_scripts'):
         if _DT_PACKAGE in ep.module:
             LOGGER.debug(ep)
-            LOGGER.info(f'{ep.name:15} {ep.module:35} {ep}') 
+            LOGGER.info(f'{ep.name:15} {ep.module:35}') 
 
 def main() -> int:
     epilog = 'With no program argument, display a list of entrypoints.\nWith program argument, display help info.'
@@ -105,8 +107,8 @@ def main() -> int:
         log_lvl = "DEBUG"
     elif args.verbose > 1:
         log_lvl = 'TRACE'
-
-    lh.configure_logger(log_level=log_lvl, brightness=False)
+    c_handle = lh.c_handle
+    lh.configure_logger(log_handle=c_handle, log_level=log_lvl, brightness=False)
 
     LOGGER.info('')
     if len(args.program) == 0:
@@ -121,5 +123,7 @@ def main() -> int:
     return 0
 
 if __name__ == "__main__":
+    c_handle = lh.configure_logger(log_level="INFO")
+    lh.c_handle = c_handle
     _VERSION = ProjectHelper.determine_version(_DT_DISTRIBUTION)
     sys.exit(main())

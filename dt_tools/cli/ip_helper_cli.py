@@ -55,7 +55,8 @@ def _display_loop_prelude():
     LOGGER.info('c [9.9.9.9]    Clear cache.  If IP address supplied, only that entry will be deleted.')
     LOGGER.info('f <str>        Search for str in cache and list entries.')
     LOGGER.info('h              This help screen.')
-    LOGGER.info('l [9.9.9.9]    List cache.  If IP address supplied, only that entry will be listed.')
+    LOGGER.info('l [9.9.9.9]    List IP cache.  If IP address supplied, only that entry will be listed.')
+    LOGGER.info('lm             List MAC cache (manually maintained)')
     LOGGER.info('q              Quit.')
     LOGGER.info('')
 
@@ -78,9 +79,10 @@ def _command_loop(ip_info: IpHelper):
     c_CLEAR = f"{console.cwrap('(c)', ColorFG.WHITE2, style=TextStyle.BOLD)}lear cache [ip]" 
     c_HELP = f"{console.cwrap('(h)', ColorFG.WHITE2, style=TextStyle.BOLD)}elp"
     c_LIST = f"{console.cwrap('(l)', ColorFG.WHITE2, style=TextStyle.BOLD)}ist [ip]"
+    c_LIST_MAC = f"{console.cwrap('(lm)', ColorFG.WHITE2, style=TextStyle.BOLD)}ist mac"
     c_FIND = f"{console.cwrap('(f)', ColorFG.WHITE2, style=TextStyle.BOLD)}ind <str>"
     c_QUIT = f"{console.cwrap('(q)', ColorFG.WHITE2, style=TextStyle.BOLD)}uit"
-    prompt = f"{c_IP}, {c_CLEAR}, {c_HELP}, {c_LIST}, {c_FIND}, {c_QUIT} > "
+    prompt = f"{c_IP}, {c_CLEAR}, {c_HELP}, {c_LIST}, {c_LIST_MAC}, {c_FIND}, {c_QUIT} > "
     token = ''
     while len(token) == 0:
         token = InputHelper().get_input_with_timeout(prompt).split()
@@ -113,6 +115,9 @@ def _command_loop(ip_info: IpHelper):
             else:
                 ip_info.list_cache()
         
+        elif cmd in ['LM', 'lm']:
+                ip_info.list_mac_cache()
+                
         else:
             # Assume IP address lookup
             bypass_cache = False

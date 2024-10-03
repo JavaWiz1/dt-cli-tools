@@ -1,12 +1,45 @@
+"""
+Provide Text-to-Speech services via VLC
+
+This module will take as input a string or a text filename.  It will
+convert the contents to a mp3 format and leverage VLC to vocalize the result.
+
+You may: 
+
+- control the accent of the voice (see -l and -a options)
+- control the speed/cadence of the speech (see -s option)
+
+Usage:
+
+speak_cli.py [-h] [-a ACCENT] [-s {slow,normal,medium,fast,faster,chipmunk}] [-l] [-v] [text ...]
+
+positional arguments:
+  text                  text (or a filename containing the text) to vocalize.
+
+options:
+  -h, --help            show this help message and exit
+  -a ACCENT, --accent ACCENT
+                        voice accent key
+  -s {slow,normal,medium,fast,faster,chipmunk}, --speed {slow,normal,medium,fast,faster,chipmunk}
+                        speed or cadences of speech
+  -l, --list            list available accent keys
+  -v, --verbose         verbose mode
+
+Notes:
+
+
+"""
 import argparse
 import sys
 
-import dt_tools.logger.logging_helper as lh
-from dt_tools.console.console_helper import TextStyle
-from dt_tools.console.console_helper import ConsoleHelper as console
-from dt_tools.os.project_helper import ProjectHelper
-from dt_tools.os.sound import Accent, Sound
 from loguru import logger as LOGGER
+
+import dt_tools.logger.logging_helper as lh
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import TextStyle
+from dt_tools.misc.sound import Accent, Sound
+from dt_tools.os.project_helper import ProjectHelper
+
 
 def _get_accent(accent_key: str) -> Accent:
     try:
