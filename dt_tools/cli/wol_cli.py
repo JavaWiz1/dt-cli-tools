@@ -9,7 +9,7 @@ enabled, will signal the device to wake-up.
 
 This module allows the user to send WOL to hostnames and IPs in addition to
 the MAC address.  This is accomplished by leveraging a cache that this program
-maintains which relates the MAC to IP and hostname.
+maintains which relates the MAC to IP and hostname (see option -s and -l).
 
 **Usage**:
     
@@ -33,8 +33,9 @@ maintains which relates the MAC to IP and hostname.
 
 Note::
 
-    The scan (-s) operation should be done on a regular basis.  This will keep the cache 
-    updated with the most recent online devices, their hostnames and IPs.
+    - The scan (-s) operation should be done on a regular basis when devices are online.  
+    - This will keep the cache updated with the most recent online devices, their hostnames and IPs.
+    - Not all devices support WOL, and in some cases device must be configured (see https://www.lifewire.com/wake-on-lan-4149800)
 
 Returns:
 
