@@ -22,12 +22,13 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10"
 
-# dt-misc = {path = "../dt-misc", develop = true }
-# dt-console = {path = "../dt-console", develop = true }
-# dt-net = {path = "../dt-net", develop = true }
-dt-misc = "*"
-dt-console = "*"
-dt-net = "*"
+dt_foundation = {path = "../dt-foundation", develop = true }
+dt-misc = {path = "../dt-misc", develop = true }
+dt-console = {path = "../dt-console", develop = true }
+dt-net = {path = "../dt-net", develop = true }
+# dt-misc = "*"
+# dt-console = "*"
+# dt-net = "*"
 dataclasses-json = "^0.6.7"
 
 
