@@ -39,7 +39,7 @@ This module checks for open[/closed] ports on target host(s).
     - 1-999   the number of un-successful connections
     - 1000+   parameter or data issue, see console message
 
-    """
+"""
 import argparse
 import concurrent.futures
 import pathlib

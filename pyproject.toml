@@ -22,14 +22,17 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10"
 
-dt_foundation = {path = "../dt-foundation", develop = true }
-dt-misc = {path = "../dt-misc", develop = true }
-dt-console = {path = "../dt-console", develop = true }
-dt-net = {path = "../dt-net", develop = true }
-# dt-misc = "*"
-# dt-console = "*"
-# dt-net = "*"
+# dt_foundation = {path = "../dt-foundation", develop = true }
+# dt-misc = {path = "../dt-misc", develop = true }
+# dt-console = {path = "../dt-console", develop = true }
+# dt-net = {path = "../dt-net", develop = true }
+dt-misc = "*"
+dt-console = "*"
+dt-net = "*"
 dataclasses-json = "^0.6.7"
+
+[tool.poetry.group.dev.dependencies]
+sphinx-rtd-theme = "^2"
 
 
 [tool.poetry.scripts]
@@ -39,7 +42,9 @@ lan-clients = 'dt_tools.cli.lan_clients_cli:main'
 port-check = 'dt_tools.cli.port_check_cli:main'
 set-api-tokens = 'dt_tools.cli.set_api_tokens_cli:main'
 speak = 'dt_tools.cli.speak_cli:main'
+weather-cli = 'dt_tools.cli.weather_cli:main'
 wol-cli = 'dt_tools.cli.wol_cli:main'
+
 
 [build-system]
 requires = ["poetry-core"]

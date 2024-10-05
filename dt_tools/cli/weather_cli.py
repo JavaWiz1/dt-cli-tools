@@ -1,8 +1,75 @@
 """
 Weather from the command-line!
 
-Returns:
-    _type_: _description_
+This utility will provide weather information (current, forecast or alerts) for a 
+on provided location.  It can also vocalize the information by adding the -speak option.
+
+Simply provide:
+  
+    - **Location** : address (or landmark), ip or gps coordinates.
+                     (ip is your internet address, mostly likely your ISP endpoint).
+    - **Type**     : current (now), today/tomorrow/day (forecast) or alerts.
+    - **options**  : any additional options.
+
+**Features**:
+
+    - Specify target locations by IP, address/landmark or GPS coordinates (latitude, longitude).
+    - Specify what type of information to be returned (current conditions, weather forecast or current alerts).
+    - Speak the results thru your devices speakers.
+
+
+**Usage**::
+
+    weather_cli LOCATION TYPE [-h] [-summary] [-speak] 
+
+    Where LOCATION and TYPE are required and defined below.
+
+    **Location**:
+        Weather location identifier:
+        -ip                   Location based on external (internet) IP.
+        -address <house street,city,state,zip> 
+                              Location or Address string.
+        -gps lat,lon          GPS coordinates. Format: lat,lon (i.e. 40.6892,-74.0445)
+
+    **Type**:
+        Weather/Forecast type:
+        -current              Current weather conditions.
+        -today {d,n}          Forecast for today (or tonight).
+        -tomorrow {d,n}       Forecast for tomorrow (day or tonight).
+        -day {d2,d3,d4,d5,n2,n3,n4,n5} 
+                              Forecast (day or night) for n days into future.
+        -alerts               Weather alerts.
+
+    **Options**:
+        -h, --help            show this help message and exit
+        -summary              Just summarize weather results, else provide details
+        -speak                Speak the result
+
+**Returns**:
+    
+    bool: result - True if successful, False if unable to identify location
+
+    
+**Examples**::
+
+    # Current weather at your location
+    > weather-cli -ip -current
+    
+    # Current weather at Statue of Liberty
+    > weather-cli -address "Statue of Liberty" -current
+    > weather-cli -gps 40.6892,-74.0445 -current
+
+    # Current location tonights Forecast
+    > weather-cli -ip -today n
+
+    # Speak current location tomorrows daytime forecast
+    > weather-cli -ip -tommorrow d -speak
+
+    # Speak current location 3 days from now night time forecast
+    > weather-cli -ip -day 3n -speak
+
+    # Weather alerts for current location
+    > weather-cli -ip -alerts
 """
 import argparse
 import sys
@@ -49,7 +116,7 @@ def _build_command_line_parser() -> argparse.ArgumentParser:
     ex_loc_group.add_argument('-address', type=str, metavar='house street,city,state,zip', 
                               help='Location or Address string.')
     ex_loc_group.add_argument('-gps', type=str, metavar='lat,lon', 
-                              help='GPS coordinates.  Format: lat,lon (i.e. 123.0,-234.2)')
+                              help='GPS coordinates.  Format: lat,lon (i.e. 40.6892,-74.0445)')
     
     cmd_group = parser.add_argument_group(title='Type', description='Weather/Forecast type')
     ex_cmd_group = cmd_group.add_mutually_exclusive_group(required=True)
@@ -113,7 +180,7 @@ def _valid_gps_coordinates(lat: float, lon: float) -> bool:
     return lat != 0.0 and lon != 0.0
 
 # ==  Weather Current Conditions  ========================================================================
-def get_current_weather(args: argparse.Namespace) -> bool:
+def _get_current_weather(args: argparse.Namespace) -> bool:
     lat, lon, place = _get_gps_coordinates(args)
     if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
@@ -123,11 +190,11 @@ def get_current_weather(args: argparse.Namespace) -> bool:
     weather.set_location_via_lat_lon(lat, lon)
     LOGGER.info(weather.to_string())
     if args.speak:
-        return speak_current_conditions(weather, args, Accent.UnitedStates)
+        return _speak_current_conditions(weather, args, Accent.UnitedStates)
     
     return True
 
-def speak_current_conditions(weather: CurrentConditions, args: argparse.Namespace, accent=Accent.UnitedStates ) -> bool:
+def _speak_current_conditions(weather: CurrentConditions, args: argparse.Namespace, accent=Accent.UnitedStates ) -> bool:
     from datetime import datetime as dt
     time_now = dt.now().strftime("%I:%M%p")
 
@@ -142,7 +209,7 @@ def speak_current_conditions(weather: CurrentConditions, args: argparse.Namespac
 
 
 # ==  Weather Forecast  ===================================================================================
-def get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
+def _get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
     lat, lon, place = _get_gps_coordinates(args)
     if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
@@ -169,11 +236,11 @@ def get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
         text = '\n'.join(lines) + '\n'           
         LOGGER.info(f'{text}')
         if args.speak:
-            return speak_forecast(forecast=forecast, args=args)
+            return _speak_forecast(forecast=forecast, args=args)
 
     return True
 
-def speak_forecast(forecast: ForecastDay, args: argparse.Namespace, accent: Accent = Accent.UnitedStates) -> bool:
+def _speak_forecast(forecast: ForecastDay, args: argparse.Namespace, accent: Accent = Accent.UnitedStates) -> bool:
     content = f"Forecast for {forecast.city} {forecast.state_full} {forecast.timeframe}.\n"
     if args.summary:
         content += forecast.short_forecast
@@ -183,7 +250,7 @@ def speak_forecast(forecast: ForecastDay, args: argparse.Namespace, accent: Acce
     return _speak(content, display=speak_display)
 
 # ==  Weather Alerts  =====================================================================================
-def get_weather_alerts(args: argparse.Namespace) -> bool:
+def _get_weather_alerts(args: argparse.Namespace) -> bool:
     lat, lon, place = _get_gps_coordinates(args)
     if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
@@ -237,14 +304,15 @@ def get_weather_alerts(args: argparse.Namespace) -> bool:
 
 
 # ==================================================================================================================
-def main() -> int:
+def main() -> bool:
     parser = _build_command_line_parser()    
     args = parser.parse_args()
     LOGGER.debug(args)
-    
+    success = False
+
     if args.current:
         # Current Forecast
-        rc = get_current_weather(args)
+        success = _get_current_weather(args)
 
     elif args.today or args.tomorrow or args.day:
         # Forecast weather
@@ -254,16 +322,16 @@ def main() -> int:
             code = f'{args.tomorrow}1'
         else:
             code = args.day
-        rc = get_weather_forecast(args, code)
+        success = _get_weather_forecast(args, code)
 
     elif args.alerts:
         # Weather Alerts
-        rc = get_weather_alerts(args)
+        success = _get_weather_alerts(args)
 
     else:
         raise RuntimeError('Unknown cmd_group value. Logic error.')
     
-    return rc
+    return success
 
 if __name__ == '__main__':
     lh.configure_logger(log_level='INFO', brightness=False)
