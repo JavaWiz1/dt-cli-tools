@@ -13,9 +13,18 @@ from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
 from dt_tools.misc.geoloc import GeoLocation
+from dt_tools.misc.sound import Accent, Sound
 from dt_tools.misc.weather.weather import CurrentConditions
-from dt_tools.misc.weather.weather_forecast_alert import Forecast, ForecastType, LocationAlerts
+from dt_tools.misc.weather.weather_forecast_alert import (Forecast,
+                                                          ForecastDay,
+                                                          ForecastType,
+                                                          LocationAlerts)
 
+def _speak(text: str, speed: float = 1.25, accent: Accent = Accent.UnitedStates, wait: bool = True) -> bool:
+    LOGGER.debug('Speak Weather:')
+    for line in text.splitlines():
+        LOGGER.debug(f'  {line}')
+    return Sound().speak(text, speed=speed, accent=accent, wait=wait)
 
 def get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float]:
     lat: float = 0.0
@@ -54,7 +63,25 @@ def get_current_weather(args: argparse.Namespace) -> bool:
     weather = CurrentConditions()    
     weather.set_location_via_lat_lon(lat, lon)
     LOGGER.info(weather.to_string())
+    if args.speak:
+        return speak_current_conditions(weather, args, Accent.UnitedStates)
+    
     return True
+
+def speak_current_conditions(weather: CurrentConditions, args: argparse.Namespace, accent=Accent.UnitedStates ) -> bool:
+    from datetime import datetime as dt
+    time_now = dt.now().strftime("%I:%M%p")
+
+    content = f"Current conditions in {weather.loc_name} at {time_now}.\n"
+    content += f"  {weather.condition}.  Temperature {weather.temp}, feels like {weather.feels_like}.\n"
+    if not args.summary:
+        content += f'  {weather.humidity_pct}% humidity, air quality is {weather.aqi_text}.\n'
+        content += f'  Visibility {weather.visibility_mi} miles.\n'
+        content += f'  Wind {weather.wind_direction} {weather.wind_speed_mph} mph, gusts up to {weather.wind_gust_mph} mph.\n'
+    for line in content.splitlines():
+        LOGGER.info(line)
+    return _speak(content)
+
 
 def get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
     lat, lon = get_gps_coordinates(args)
@@ -65,6 +92,7 @@ def get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
     weather = Forecast(lat, lon)
     time_of_day = ForecastType.DAY if forecast_code[0] == 'd' else ForecastType.NIGHT
     day_offset = int(forecast_code[1])
+    LOGGER.warning(f'Day offset: {day_offset} time of day: {time_of_day}')
     forecast = weather.forecast_for_future_day(days_in_future=day_offset, time_of_day=time_of_day)
     LOGGER.debug(forecast.to_string())
     if args.summary:
@@ -81,8 +109,19 @@ def get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
                             subsequent_indent=' '*2)
         text = '\n'.join(lines) + '\n'           
         LOGGER.info(f'{text}')
+        if args.speak:
+            return speak_forecast(forecast=forecast, args=args)
 
     return True
+
+def speak_forecast(forecast: ForecastDay, args: argparse.Namespace, accent: Accent = Accent.UnitedStates) -> bool:
+    content = f"Forecast for {forecast.city} {forecast.state_full} {forecast.timeframe}.\n"
+    if args.summary:
+        content += forecast.short_forecast
+    else:
+        content += forecast.detailed_forecast
+    
+    return _speak(content)
 
 def get_weather_alerts(args: argparse.Namespace) -> bool:
     lat, lon = get_gps_coordinates(args)
@@ -95,11 +134,18 @@ def get_weather_alerts(args: argparse.Namespace) -> bool:
     location = alerts.city_state if alerts.city_state is not None else f'{alerts.latitude:.4f}/{alerts.longitude:.4f}'
     if alerts.alert_count == 0:
         LOGGER.error(f'There are 0 alerts for {location}')
+        if args.speak:
+            _speak(f'There are 0 alerts for {location}')
         return False
     
     LOGGER.success(f'Weather alerts for {location}')
+    if args.speak:
+        _speak(f'{alerts.alert_count} weather alerts for {alerts.city} {alerts.state_full}.', wait=False)
+
     for idx in range(alerts.alert_count):
         LOGGER.warning(f'{idx+1:2d} {alerts.headline(idx)}')
+        if args.speak:
+            _speak(f'Alert {idx+1}.  {alerts.headline(idx)}', wait=False)
         LOGGER.info(f'   Type      : {alerts.message_type(idx)}')
         LOGGER.info(f'   Effective : {alerts.effective(idx)}')
         LOGGER.info(f'   Expires   : {alerts.expires(idx)}')
@@ -108,14 +154,20 @@ def get_weather_alerts(args: argparse.Namespace) -> bool:
         LOGGER.info(f'   Status    : {alerts.status(idx)}')
         LOGGER.info('')
         LOGGER.success( '   Description:')
+        content = ''
         for line in alerts.description(idx).splitlines():
             LOGGER.info(f'     {line}')
+            content += f"{line.replace('* ','')}\n"
+        if args.speak and not args.summary:
+            _speak(content)
         instructions = alerts.instruction(idx)
         if instructions != 'Unknown':
             LOGGER.info('')
             LOGGER.success('   Instructions:')
             for line in alerts.instruction(idx).splitlines():
                 LOGGER.info(f'     {line}')
+        if args.speak and not args.summary:
+            _speak(alerts.instruction(idx))
 
     return True
 
