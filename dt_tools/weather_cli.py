@@ -15,21 +15,78 @@ import dt_tools.logger.logging_helper as lh
 from dt_tools.misc.geoloc import GeoLocation
 from dt_tools.misc.sound import Accent, Sound
 from dt_tools.misc.weather.weather import CurrentConditions
-from dt_tools.misc.weather.weather_forecast_alert import (Forecast,
-                                                          ForecastDay,
-                                                          ForecastType,
-                                                          LocationAlerts)
+from dt_tools.misc.weather.weather_forecast_alert import (
+    Forecast,
+    ForecastDay,
+    ForecastType,
+    LocationAlerts,
+)
+from dt_tools.misc.weather.common import WeatherSymbols as ws
+from dt_tools.os.project_helper import ProjectHelper
 
-def _speak(text: str, speed: float = 1.25, accent: Accent = Accent.UnitedStates, wait: bool = True) -> bool:
-    LOGGER.debug('Speak Weather:')
-    for line in text.splitlines():
-        LOGGER.debug(f'  {line}')
+
+# ==  Helper Routines  ===================================================================================
+def _build_command_line_parser() -> argparse.ArgumentParser:
+    version = ProjectHelper.determine_version('dt-cli-tools')
+    epilog = f"Weather CLI Utility (v{version})\n"
+    epilog += "----------------------------------------------------------------------------------------\n"
+    epilog += "This utility will provide weather information (current, forecast or alerts) based\n"
+    epilog += "on provided location.  It can also vocalize the information by adding the -speak option.\n\n"
+    epilog += "Simply provide-\n"
+    epilog += "  Location : address (or landmark), ip or gps coordinates\n"
+    epilog += "             (ip is your internet address, mostly likely your ISP endpoint)\n"
+    epilog += "  Type     : current (now), today/tomorrow/day (forecast) or alerts\n\n"
+    epilog += "Examples-\n"
+    epilog += "  > weather_cli -ip -current\n"
+    epilog += "  > weather_cli -address 'Statue of Liberty' -tomorrow d\n"
+    epilog += "----------------------------------------------------------------------------------------\n"
+    # description = textwrap.dedent(description)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, epilog=epilog)
+    loc_group = parser.add_argument_group(title='Location', description='Weather location identifier')
+    ex_loc_group = loc_group.add_mutually_exclusive_group(required=True)
+    ex_loc_group.add_argument('-ip', action='store_true', default=False, 
+                              help='Location based on external (internet) IP.')
+    ex_loc_group.add_argument('-address', type=str, metavar='house street,city,state,zip', 
+                              help='Location or Address string.')
+    ex_loc_group.add_argument('-gps', type=str, metavar='lat,lon', 
+                              help='GPS coordinates.  Format: lat,lon (i.e. 123.0,-234.2)')
+    
+    cmd_group = parser.add_argument_group(title='Type', description='Weather/Forecast type')
+    ex_cmd_group = cmd_group.add_mutually_exclusive_group(required=True)
+    ex_cmd_group.add_argument('-current', action='store_true', default=False, 
+                              help='Current weather conditions.')
+    ex_cmd_group.add_argument('-today',    choices=['d','n'], 
+                              help='Forecast for today (or tonight).')
+    ex_cmd_group.add_argument('-tomorrow', choices=['d','n'], 
+                              help='Forecast for tomorrow (day or tonight).')
+    ex_cmd_group.add_argument('-day', choices=['d2','d3','d4','d5','n2','n3','n4','n5'], 
+                              help='Forecast (day or night) for n days into future.')
+    ex_cmd_group.add_argument('-alerts', action='store_true',default=False,  
+                              help='Weather alerts.')
+    
+    parser.add_argument('-summary', action='store_true', 
+                        help='Just summarize weather results, else provide details')
+    parser.add_argument('-speak', action='store_true', 
+                        help='Speak the result')
+    parser.add_argument('-speakd', action='store_true', 
+                        help='Display the Speak result')
+    return parser
+    
+
+def _speak(text: str, speed: float = 1.25, accent: Accent = Accent.UnitedStates, wait: bool = True, display: bool = False) -> bool:
+    text = text.replace('\n', ' ').replace('. ', '.\n')
+    if display:
+        LOGGER.warning('Speak Weather:')
+        for line in text.splitlines():
+            LOGGER.warning(f'  {line.strip()}')
+
     return Sound().speak(text, speed=speed, accent=accent, wait=wait)
 
-def get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float]:
+def _get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float, str]:
     lat: float = 0.0
     lon: float = 0.0
-    
+    place: str = ''
+
     geo = GeoLocation()
     if args.ip:
         if geo.get_location_via_ip():
@@ -38,7 +95,8 @@ def get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float]:
     elif args.address:
         if geo.get_location_via_address_string(args.address):
             lat = geo.lat
-            lon = geo.lon 
+            lon = geo.lon
+            place = args.address
     elif args.gps:
         x, y = args.gps.split(',')
         try:
@@ -49,14 +107,15 @@ def get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float]:
             lon = 0.0
 
     LOGGER.debug(f'Geo:\n{geo.to_string()}')
-    return (lat, lon)
+    return (lat, lon, place)
 
-def valid_gps_coordinates(lat: float, lon: float) -> bool:
+def _valid_gps_coordinates(lat: float, lon: float) -> bool:
     return lat != 0.0 and lon != 0.0
 
+# ==  Weather Current Conditions  ========================================================================
 def get_current_weather(args: argparse.Namespace) -> bool:
-    lat, lon = get_gps_coordinates(args)
-    if not valid_gps_coordinates(lat, lon):
+    lat, lon, place = _get_gps_coordinates(args)
+    if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
         return False
     
@@ -73,19 +132,19 @@ def speak_current_conditions(weather: CurrentConditions, args: argparse.Namespac
     time_now = dt.now().strftime("%I:%M%p")
 
     content = f"Current conditions in {weather.loc_name} at {time_now}.\n"
-    content += f"  {weather.condition}.  Temperature {weather.temp}, feels like {weather.feels_like}.\n"
+    content += f"  {weather.condition}.  Temperature {weather.temp:.0f}{ws.degree.value}, feels like {weather.feels_like:.0f}{ws.degree.value}.\n"
     if not args.summary:
-        content += f'  {weather.humidity_pct}% humidity, air quality is {weather.aqi_text}.\n'
+        content += f'  {weather.humidity_pct:.0f}% humidity, air quality is {weather.aqi_text}.\n'
         content += f'  Visibility {weather.visibility_mi} miles.\n'
-        content += f'  Wind {weather.wind_direction} {weather.wind_speed_mph} mph, gusts up to {weather.wind_gust_mph} mph.\n'
-    for line in content.splitlines():
-        LOGGER.info(line)
-    return _speak(content)
+        content += f'  Wind {ws.translate_compass_point(weather.wind_direction)} {weather.wind_speed_mph:.0f} mph, gusts up to {weather.wind_gust_mph:.0f} mph.\n'
+    speak_display = True if args.speakd else False
+    return _speak(content, display=speak_display)
 
 
+# ==  Weather Forecast  ===================================================================================
 def get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
-    lat, lon = get_gps_coordinates(args)
-    if not valid_gps_coordinates(lat, lon):
+    lat, lon, place = _get_gps_coordinates(args)
+    if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
         return False
     
@@ -120,32 +179,32 @@ def speak_forecast(forecast: ForecastDay, args: argparse.Namespace, accent: Acce
         content += forecast.short_forecast
     else:
         content += forecast.detailed_forecast
-    
-    return _speak(content)
+    speak_display = True if args.speakd else False    
+    return _speak(content, display=speak_display)
 
+# ==  Weather Alerts  =====================================================================================
 def get_weather_alerts(args: argparse.Namespace) -> bool:
-    lat, lon = get_gps_coordinates(args)
-    if not valid_gps_coordinates(lat, lon):
+    lat, lon, place = _get_gps_coordinates(args)
+    if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
         return False
     
     LOGGER.info('')
     alerts = LocationAlerts(lat, lon)
-    location = alerts.city_state if alerts.city_state is not None else f'{alerts.latitude:.4f}/{alerts.longitude:.4f}'
+    # location = alerts.city_state if alerts.city_state is not None else f'{alerts.latitude:.4f}/{alerts.longitude:.4f}'
+    location = alerts.city_state if alerts.city_state is not None else f'{place}'
     if alerts.alert_count == 0:
-        LOGGER.error(f'There are 0 alerts for {location}')
+        LOGGER.error(f'There are 0 alerts for {location} [{alerts.latitude:.4f}/{alerts.longitude:.4f}]')
         if args.speak:
             _speak(f'There are 0 alerts for {location}')
         return False
     
-    LOGGER.success(f'Weather alerts for {location}')
+    LOGGER.success(f'Weather alerts for {location} [{alerts.latitude:.4f}/{alerts.longitude:.4f}]')
     if args.speak:
         _speak(f'{alerts.alert_count} weather alerts for {alerts.city} {alerts.state_full}.', wait=False)
 
     for idx in range(alerts.alert_count):
         LOGGER.warning(f'{idx+1:2d} {alerts.headline(idx)}')
-        if args.speak:
-            _speak(f'Alert {idx+1}.  {alerts.headline(idx)}', wait=False)
         LOGGER.info(f'   Type      : {alerts.message_type(idx)}')
         LOGGER.info(f'   Effective : {alerts.effective(idx)}')
         LOGGER.info(f'   Expires   : {alerts.expires(idx)}')
@@ -157,44 +216,38 @@ def get_weather_alerts(args: argparse.Namespace) -> bool:
         content = ''
         for line in alerts.description(idx).splitlines():
             LOGGER.info(f'     {line}')
-            content += f"{line.replace('* ','')}\n"
+            content += f"{line}\n"
         if args.speak and not args.summary:
-            _speak(content)
+            content = content.replace('* ', '')
+            text = f'Alert {idx+1}.  {alerts.headline(idx)}. {content}'
+            speak_display = True if args.speakd else False
+            _speak(text, display=speak_display)
+
         instructions = alerts.instruction(idx)
         if instructions != 'Unknown':
             LOGGER.info('')
             LOGGER.success('   Instructions:')
-            for line in alerts.instruction(idx).splitlines():
+            for line in instructions.splitlines():
                 LOGGER.info(f'     {line}')
-        if args.speak and not args.summary:
-            _speak(alerts.instruction(idx))
+            if args.speak and not args.summary:
+                speak_display = True if args.speakd else False
+                _speak(instructions, display=speak_display)
 
     return True
 
 
+# ==================================================================================================================
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    loc_group = parser.add_argument_group(title='Location', description='Weather location identifier')
-    ex_loc_group = loc_group.add_mutually_exclusive_group(required=True)
-    ex_loc_group.add_argument('-ip', action='store_true', default=False, help='Location based on external (internet) IP.')
-    ex_loc_group.add_argument('-address', type=str, metavar='house street,city,state,zip', help='Location or Address string.')
-    ex_loc_group.add_argument('-gps', type=str, metavar='lat,lon', help='GPS coordinates.  Format: lat,lon (i.e. 123.0,-234.2)')
-    cmd_group = parser.add_argument_group(title='Type', description='Weather/Forecast type')
-    ex_cmd_group = cmd_group.add_mutually_exclusive_group(required=True)
-    ex_cmd_group.add_argument('-current', action='store_true', default=False, help='Current weather conditions.')
-    ex_cmd_group.add_argument('-today',    choices=['d','n'], help='Forecast for today (or tonight).')
-    ex_cmd_group.add_argument('-tomorrow', choices=['d','n'], help='Forecast for tomorrow (day or tonight).')
-    ex_cmd_group.add_argument('-day', choices=['d2','d3','d4','d5','n2','n3','n4','n5'], help='Forecast (day or night) for n days into future.')
-    ex_cmd_group.add_argument('-alerts', action='store_true',default=False,  help='Weather alerts.')
-    parser.add_argument('-summary', action='store_true', help='Just summarize weather results, else provide details')
-    parser.add_argument('-speak', action='store_true', help='Speak the result')
+    parser = _build_command_line_parser()    
     args = parser.parse_args()
     LOGGER.debug(args)
     
     if args.current:
+        # Current Forecast
         rc = get_current_weather(args)
 
     elif args.today or args.tomorrow or args.day:
+        # Forecast weather
         if args.today:
             code = f'{args.today}0'
         elif args.tomorrow:
@@ -204,6 +257,7 @@ def main() -> int:
         rc = get_weather_forecast(args, code)
 
     elif args.alerts:
+        # Weather Alerts
         rc = get_weather_alerts(args)
 
     else:
