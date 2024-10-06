@@ -32,8 +32,6 @@ from dt_tools.os.project_helper import ProjectHelper
 _DT_PACKAGE = 'dt_tools.cli'
 _DT_DISTRIBUTION = 'dt-cli-tools'
 
-_VERSION = '' 
-
 def _replace_md(line: str, re_pattern: str, fg: ColorFG, style: List[TextStyle]) -> str:
     keywords = re.findall(re_pattern, line)
     if len(keywords) > 0:
@@ -52,7 +50,8 @@ def _replace_markdown(line: str) -> str:
 
 
 def _display_module_help(pgm_name: str):
-    eyecatcher = f'{con.cwrap(pgm_name,fg=ColorFG.WHITE2, style=[TextStyle.BOLD])}   (v{_VERSION})'
+    version = ProjectHelper.determine_version(_DT_DISTRIBUTION)
+    eyecatcher = f'{con.cwrap(pgm_name,fg=ColorFG.WHITE2, style=[TextStyle.BOLD])}   (v{version})'
     LOGGER.info(eyecatcher)
     LOGGER.info('-'*len(eyecatcher))
 
@@ -79,8 +78,8 @@ def _display_module_help(pgm_name: str):
             LOGGER.error(f'- {pgm_name} not found.  {repr(ex)}')
 
 def _list_entrypoints():
-    version = f'{_DT_PACKAGE} {con.cwrap(f"v{_VERSION}",fg=ColorFG.WHITE2, style=[TextStyle.BOLD, TextStyle.ITALIC])}'
-    eyecatcher = f'dt_tools Help   ({version})' 
+    version = ProjectHelper.determine_version(_DT_DISTRIBUTION)
+    eyecatcher = f'dt_tools Help   (v{con.cwrap(version, fg=ColorFG.WHITE2, style=[TextStyle.BOLD, TextStyle.ITALIC])})' 
     con.print_line_separator(' ', 80)
     con.print_line_separator(eyecatcher, 80)
     # LOGGER.info(eyecatcher)
@@ -96,8 +95,9 @@ def _list_entrypoints():
             LOGGER.info(f'{ep.name:15} {ep.module:35}') 
 
 def main() -> int:
+    version = ProjectHelper.determine_version(_DT_DISTRIBUTION)
     epilog = 'With no program argument, display a list of entrypoints.\nWith program argument, display help info.'
-    parser = ArgumentParser(epilog=epilog, description=f'Help for CLI Entrypoints  ({_DT_DISTRIBUTION} v{_VERSION})')
+    parser = ArgumentParser(epilog=epilog, description=f'Help for CLI Entrypoints  (v{version})')
     parser.add_argument('program', nargs='*', type=str, help='program name for help')
     parser.add_argument('-v', '--verbose', action='count', default=0, help='verbose logging')
     args = parser.parse_args()
@@ -107,7 +107,8 @@ def main() -> int:
         log_lvl = "DEBUG"
     elif args.verbose > 1:
         log_lvl = 'TRACE'
-    c_handle = lh.c_handle
+    
+    c_handle = LOGGER.c_handle if getattr(LOGGER,'c_handle') else 0
     lh.configure_logger(log_handle=c_handle, log_level=log_lvl, brightness=False)
 
     LOGGER.info('')
@@ -124,6 +125,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     c_handle = lh.configure_logger(log_level="INFO")
-    lh.c_handle = c_handle
-    _VERSION = ProjectHelper.determine_version(_DT_DISTRIBUTION)
+    LOGGER.c_handle = c_handle
     sys.exit(main())
