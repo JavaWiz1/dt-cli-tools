@@ -108,8 +108,7 @@ def main() -> int:
     elif args.verbose > 1:
         log_lvl = 'TRACE'
     
-    c_handle = LOGGER.c_handle if getattr(LOGGER,'c_handle') else 0
-    lh.configure_logger(log_handle=c_handle, log_level=log_lvl, brightness=False)
+    lh.configure_logger(log_level=log_lvl, brightness=False)
 
     LOGGER.info('')
     if len(args.program) == 0:
@@ -124,6 +123,5 @@ def main() -> int:
     return 0
 
 if __name__ == "__main__":
-    c_handle = lh.configure_logger(log_level="INFO")
-    LOGGER.c_handle = c_handle
+    # LOGGER.c_handle = lh.configure_logger(log_level="INFO")
     sys.exit(main())
