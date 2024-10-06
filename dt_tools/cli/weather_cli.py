@@ -79,8 +79,10 @@ from typing import Tuple
 from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
+from dt_tools.console.console_helper import ConsoleHelper, TextStyle
 from dt_tools.misc.geoloc import GeoLocation
 from dt_tools.misc.sound import Accent, Sound
+from dt_tools.misc.weather.common import WeatherSymbols as ws
 from dt_tools.misc.weather.weather import CurrentConditions
 from dt_tools.misc.weather.weather_forecast_alert import (
     Forecast,
@@ -88,7 +90,6 @@ from dt_tools.misc.weather.weather_forecast_alert import (
     ForecastType,
     LocationAlerts,
 )
-from dt_tools.misc.weather.common import WeatherSymbols as ws
 from dt_tools.os.project_helper import ProjectHelper
 
 
@@ -137,6 +138,8 @@ def _build_command_line_parser() -> argparse.ArgumentParser:
                         help='Speak the result')
     parser.add_argument('-speakd', action='store_true', 
                         help='Display the Speak result')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Verbose logging')
     return parser
     
 
@@ -218,7 +221,7 @@ def _get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
     weather = Forecast(lat, lon)
     time_of_day = ForecastType.DAY if forecast_code[0] == 'd' else ForecastType.NIGHT
     day_offset = int(forecast_code[1])
-    LOGGER.warning(f'Day offset: {day_offset} time of day: {time_of_day}')
+    LOGGER.debug(f'Day offset: {day_offset} time of day: {time_of_day}')
     forecast = weather.forecast_for_future_day(days_in_future=day_offset, time_of_day=time_of_day)
     LOGGER.debug(forecast.to_string())
     if args.summary:
@@ -307,9 +310,23 @@ def _get_weather_alerts(args: argparse.Namespace) -> bool:
 def main() -> bool:
     parser = _build_command_line_parser()    
     args = parser.parse_args()
-    LOGGER.debug(args)
+    version = f'{ConsoleHelper.cwrap(ProjectHelper.determine_version("dt-cli-tools"), style=TextStyle.ITALIC)}'
+    ConsoleHelper.print_line_separator(length=80)
+    ConsoleHelper.print_line_separator(f'{parser.prog}  (v{version})', 80)
     success = False
+    if args.verbose == 0:
+        l_level = "INFO"    
+        l_format = lh.DEFAULT_CONSOLE_LOGFMT
+    elif args.verbose == 1:
+        l_level = "DEBUG"
+        l_format = lh.DEFAULT_DEBUG_LOGFMT
+    else:
+        l_level = "TRACE"
+        l_format = lh.DEFAULT_DEBUG_LOGFMT
 
+    lh.configure_logger(log_level=l_level, log_format=l_format, brightness=False)
+    LOGGER.debug(f'args: {args}')
+    
     if args.current:
         # Current Forecast
         success = _get_current_weather(args)
@@ -334,5 +351,4 @@ def main() -> bool:
     return success
 
 if __name__ == '__main__':
-    lh.configure_logger(log_level='INFO', brightness=False)
     sys.exit(main())
