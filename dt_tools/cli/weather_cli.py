@@ -74,6 +74,7 @@ Simply provide:
 import argparse
 import sys
 import textwrap
+from datetime import datetime as dt
 from typing import Tuple
 
 from loguru import logger as LOGGER
@@ -136,19 +137,19 @@ def _build_command_line_parser() -> argparse.ArgumentParser:
                         help='Just summarize weather results, else provide details')
     parser.add_argument('-speak', action='store_true', 
                         help='Speak the result')
-    parser.add_argument('-speakd', action='store_true', 
-                        help='Display the Speak result')
+    parser.add_argument('-a', '--accent', type=str, default='us',
+                        help='Speak accent (speak -l to list all accent codes)')
     parser.add_argument('-v', '--verbose', action='count', default=0,
                         help='Verbose logging')
     return parser
     
 
-def _speak(text: str, speed: float = 1.25, accent: Accent = Accent.UnitedStates, wait: bool = True, display: bool = False) -> bool:
+def _speak(text: str, speed: float = 1.25, accent_cd: str = 'us', wait: bool = True) -> bool:
     text = text.replace('\n', ' ').replace('. ', '.\n')
-    if display:
-        LOGGER.warning('Speak Weather:')
-        for line in text.splitlines():
-            LOGGER.warning(f'  {line.strip()}')
+    accent = Accent(accent_cd)
+    LOGGER.debug(f'Speak Weather ({accent}):')
+    for line in text.splitlines():
+        LOGGER.debug(f'  {line.strip()}')
 
     return Sound().speak(text, speed=speed, accent=accent, wait=wait)
 
@@ -191,13 +192,18 @@ def _get_current_weather(args: argparse.Namespace) -> bool:
     
     weather = CurrentConditions()    
     weather.set_location_via_lat_lon(lat, lon)
-    LOGGER.info(weather.to_string())
+    LOGGER.success(f'Current weather conditions for {dt.strftime(dt.now(),"%A - %H:%M %p")}')
+    LOGGER.info(f'  {weather.loc_name} {weather.loc_region}. [{weather.lat_long}]')
+    LOGGER.info('')
+    for line in weather.to_string().splitlines():
+        LOGGER.info(f'  {line}')
+
     if args.speak:
-        return _speak_current_conditions(weather, args, Accent.UnitedStates)
+        return _speak_current_conditions(weather, args)
     
     return True
 
-def _speak_current_conditions(weather: CurrentConditions, args: argparse.Namespace, accent=Accent.UnitedStates ) -> bool:
+def _speak_current_conditions(weather: CurrentConditions, args: argparse.Namespace) -> bool:
     from datetime import datetime as dt
     time_now = dt.now().strftime("%I:%M%p")
 
@@ -205,10 +211,11 @@ def _speak_current_conditions(weather: CurrentConditions, args: argparse.Namespa
     content += f"  {weather.condition}.  Temperature {weather.temp:.0f}{ws.degree.value}, feels like {weather.feels_like:.0f}{ws.degree.value}.\n"
     if not args.summary:
         content += f'  {weather.humidity_pct:.0f}% humidity, air quality is {weather.aqi_text}.\n'
+        if weather.precipitation > 0.0:
+            content += f'{weather.precipitation} inches of precipitation.\n'
         content += f'  Visibility {weather.visibility_mi} miles.\n'
         content += f'  Wind {ws.translate_compass_point(weather.wind_direction)} {weather.wind_speed_mph:.0f} mph, gusts up to {weather.wind_gust_mph:.0f} mph.\n'
-    speak_display = True if args.speakd else False
-    return _speak(content, display=speak_display)
+    return _speak(content, accent_cd=args.accent, wait=False)
 
 
 # ==  Weather Forecast  ===================================================================================
@@ -243,14 +250,13 @@ def _get_weather_forecast(args: argparse.Namespace, forecast_code: str) -> bool:
 
     return True
 
-def _speak_forecast(forecast: ForecastDay, args: argparse.Namespace, accent: Accent = Accent.UnitedStates) -> bool:
+def _speak_forecast(forecast: ForecastDay, args: argparse.Namespace) -> bool:
     content = f"Forecast for {forecast.city} {forecast.state_full} {forecast.timeframe}.\n"
     if args.summary:
         content += forecast.short_forecast
     else:
         content += forecast.detailed_forecast
-    speak_display = True if args.speakd else False    
-    return _speak(content, display=speak_display)
+    return _speak(content, accent_cd=args.accent)
 
 # ==  Weather Alerts  =====================================================================================
 def _get_weather_alerts(args: argparse.Namespace) -> bool:
@@ -266,12 +272,13 @@ def _get_weather_alerts(args: argparse.Namespace) -> bool:
     if alerts.alert_count == 0:
         LOGGER.error(f'There are 0 alerts for {location} [{alerts.latitude:.4f}/{alerts.longitude:.4f}]')
         if args.speak:
-            _speak(f'There are 0 alerts for {location}')
+            _speak(f'There are 0 alerts for {location}', accent_cd=args.accent)
         return False
     
     LOGGER.success(f'Weather alerts for {location} [{alerts.latitude:.4f}/{alerts.longitude:.4f}]')
     if args.speak:
-        _speak(f'{alerts.alert_count} weather alerts for {alerts.city} {alerts.state_full}.', wait=False)
+        _speak(f'{alerts.alert_count} weather alerts for {alerts.city} {alerts.state_full}.',
+               accent_cd=args.accent, wait=False)
 
     for idx in range(alerts.alert_count):
         LOGGER.warning(f'{idx+1:2d} {alerts.headline(idx)}')
@@ -290,8 +297,7 @@ def _get_weather_alerts(args: argparse.Namespace) -> bool:
         if args.speak and not args.summary:
             content = content.replace('* ', '')
             text = f'Alert {idx+1}.  {alerts.headline(idx)}. {content}'
-            speak_display = True if args.speakd else False
-            _speak(text, display=speak_display)
+            _speak(text, accent_cd=args.accent)
 
         instructions = alerts.instruction(idx)
         if instructions != 'Unknown':
@@ -300,8 +306,7 @@ def _get_weather_alerts(args: argparse.Namespace) -> bool:
             for line in instructions.splitlines():
                 LOGGER.info(f'     {line}')
             if args.speak and not args.summary:
-                speak_display = True if args.speakd else False
-                _speak(instructions, display=speak_display)
+                _speak(instructions, accent_cd=args.accent)
 
     return True
 
@@ -325,8 +330,12 @@ def main() -> bool:
         l_format = lh.DEFAULT_DEBUG_LOGFMT
 
     lh.configure_logger(log_level=l_level, log_format=l_format, brightness=False)
-    LOGGER.debug(f'args: {args}')
-    
+    LOGGER.debug(f'args: {args}')    
+    try:
+        Accent(args.accent)
+    except ValueError as ve:
+        LOGGER.error(f'{repr(ve)}, defaulting to "us".')
+        args.accent = 'us'
     if args.current:
         # Current Forecast
         success = _get_current_weather(args)
