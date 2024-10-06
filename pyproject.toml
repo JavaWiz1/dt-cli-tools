@@ -1,7 +1,7 @@
 [tool.poetry]
 package-mode = true 
 name = "dt-cli-tools"
-version = "0.1.10"
+version = "0.1.11"
 description = "Various CLIs created from dt-tools packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
