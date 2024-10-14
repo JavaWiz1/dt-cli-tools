@@ -78,6 +78,19 @@ Features:
     - Selectable accents (see --list option for values)
     - Control cadence/speed of voice
 
+## weather-cli
+
+Weather command line interface
+
+Get weather for any location from your command line!
+
+Features:
+
+  - Get weather (current, forecast or alerts)
+  - Specify location as GPS coordinates, an address, a landmark, or from your internet IP location
+  - Specify future dates for weather forecast
+  - Have device 'speak' the weather
+
 
 ## wol-cli 
 
