@@ -55,12 +55,18 @@ Features:
     - Threaded to improve performance for large number of ports
 
 
-## set-iphelper-token  
+## set-api-tokens  
 
-This module creates the token file and stores the token used for interface with ipinfo.io.
+This module creates the token file and stores the tokens used for 3rd party interfaces.
 
-To get your token, go to https:/ipinfo.io/missingauth
+Visit the Token registration URL to aquire a FREE token for the desired service, then run
+set-api-tokens (from dt-foundation package) to cache the token locally for the dt-* routines.
 
+| Service | Function | Token registration URL |
+| ---     | ---      | ---                    |
+| ip-info.io | Retrieve IP metadata | https://ipinfo.io/missingauth | 
+| weatherapi.com | Current weather conditions | https://www.weatherapi.com/signup.aspx |
+| geocode.maps.co | GeoCode lookup based on address, ip, etc.. | https://geocode.maps.co/join/ |
 
 ## speak
 
