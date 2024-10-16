@@ -193,6 +193,7 @@ def _get_current_weather(args: argparse.Namespace) -> bool:
     weather = CurrentConditions()    
     weather.set_location_via_lat_lon(lat, lon)
     LOGGER.success(f'Current weather conditions for {dt.strftime(dt.now(),"%A - %H:%M %p")}')
+    LOGGER.warning(f'weather:\n{weather.to_string()}')
     LOGGER.info(f'  {weather.loc_name} {weather.loc_region}. [{weather.lat_long}]')
     LOGGER.info('')
     for line in weather.to_string().splitlines():
