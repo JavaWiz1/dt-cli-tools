@@ -2,11 +2,11 @@
 package-mode = true 
 name = "dt-cli-tools"
 version = "0.1.12"
-description = "Various CLIs created from dt-tools packages"
+description = "Various CLIs created from dt-* packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/JavaWiz1/dt-net"
+repository = "https://github.com/JavaWiz1/dt-cli-tools"
 keywords = ["python", "dt-tools", "network"]
 classifiers = [
     "License :: OSI Approved :: MIT License",

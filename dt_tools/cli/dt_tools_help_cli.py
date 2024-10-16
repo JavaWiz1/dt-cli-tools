@@ -52,6 +52,7 @@ def _replace_markdown(line: str) -> str:
 def _display_module_help(pgm_name: str):
     version = ProjectHelper.determine_version(_DT_DISTRIBUTION)
     eyecatcher = f'{con.cwrap(pgm_name,fg=ColorFG.WHITE2, style=[TextStyle.BOLD])}   (v{version})'
+    module_list = []
     LOGGER.info(eyecatcher)
     LOGGER.info('-'*len(eyecatcher))
 
@@ -60,7 +61,11 @@ def _display_module_help(pgm_name: str):
     for ep in entrypoints.select(group='console_scripts'):
         LOGGER.debug(f'- name: {ep.name}  module: {ep.module}')
         if _DT_PACKAGE in ep.module and ep.name == pgm_name:
+            if ep.module in module_list:
+                LOGGER.debug(f'DUPLICATE - {module}')
+                continue
             module = ep.module
+            module_list.append(module)
             LOGGER.debug(f'FOUND - {module}')
             break
 
@@ -82,15 +87,17 @@ def _list_entrypoints():
     eyecatcher = f'dt_tools Help   (v{con.cwrap(version, fg=ColorFG.WHITE2, style=[TextStyle.BOLD, TextStyle.ITALIC])})' 
     con.print_line_separator(' ', 80)
     con.print_line_separator(eyecatcher, 80)
-    # LOGGER.info(eyecatcher)
-    # LOGGER.info('-'*len(eyecatcher))
+
     LOGGER.info('')
     con.print(f'{con.cwrap(sh.pad_r("EntryPoint",15),style=TextStyle.UNDERLINE)} {con.cwrap(sh.pad_r("Module",35),style=TextStyle.UNDERLINE)}')
-    # LOGGER.info('EntryPoint      Module')
-    # LOGGER.info('--------------- ------------------------------------')
     entrypoints = im.entry_points()
+    modules = []
     for ep in entrypoints.select(group='console_scripts'):
         if _DT_PACKAGE in ep.module:
+            if ep.module in modules:
+                LOGGER.debug(f'Duplicate: {ep}')
+                continue
+            modules.append(ep.module)
             LOGGER.debug(ep)
             LOGGER.info(f'{ep.name:15} {ep.module:35}') 
 
