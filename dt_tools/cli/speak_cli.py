@@ -32,13 +32,13 @@ Notes:
 import argparse
 import sys
 
-from loguru import logger as LOGGER
-
 import dt_tools.logger.logging_helper as lh
 from dt_tools.console.console_helper import ConsoleHelper as console
 from dt_tools.console.console_helper import TextStyle
-from dt_tools.misc.sound import Accent, Sound
+from dt_tools.misc.sound import Accent
+from dt_tools.misc.sound import Sound
 from dt_tools.os.project_helper import ProjectHelper
+from loguru import logger as LOGGER
 
 
 def _get_accent(accent_key: str) -> Accent:

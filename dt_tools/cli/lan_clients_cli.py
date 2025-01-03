@@ -225,6 +225,7 @@ def main() -> int:
     console.print('')
     if args.list:
         from dt_tools.net.ip_info_helper import IpHelper as ih
+        LOGGER.enable('dt_tools.net.ip_info_helper')
         ih().list_mac_cache()
         return 0
     

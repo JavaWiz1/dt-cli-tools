@@ -268,7 +268,8 @@ def main() -> int:
     if args.verbose:
         LG_LEVEL = "DEBUG"
         end_tag = ''
-    lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_CONSOLE_LOGFMT,log_handle=c_handle, brightness=False)
+        LOGGER.enable('dt_tools.net')
+        lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_DEBUG_LOGFMT,log_handle=c_handle, brightness=False)
     
     LOGGER.info('')
     LOGGER.info(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}')
@@ -287,6 +288,10 @@ def main() -> int:
             host = args.ip
         else:
             host = args.name.lower()
+        # if net_helper.ping(host):
+        #     LOGGER.info(f'{host} is already online.')
+        #     return True
+        
         LOGGER.info(f'Sending WOL to {console.cwrap(host, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ',end=end_tag,flush=True)
         success = wol.send_wol_to_host(host, wait_secs=args.timeout)
         if not success:

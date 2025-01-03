@@ -157,6 +157,7 @@ def main():
     console.print('')
 
     ip_helper = IpHelper()
+    LOGGER.enable('dt_tools.net.ip_info_helper')
     if args.clear or args.list:
         if args.clear:
             LOGGER.success(f'  {ip_helper.clear_cache(args.ip)} entries removed.')

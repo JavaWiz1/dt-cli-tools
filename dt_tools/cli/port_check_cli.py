@@ -250,11 +250,17 @@ def main():
     args = parser.parse_args()
     if args.verbose == 0:
         log_level = "INFO"
+        log_format = lh.DEFAULT_CONSOLE_LOGFMT
     elif args.verbose == 1:
         log_level = "DEBUG"
+        LOGGER.enable('dt_tools.net.net_helper')
+        log_format = lh.DEFAULT_DEBUG_LOGFMT
     else:
         log_level = "TRACE"
-    lh.configure_logger(log_level=log_level, brightness=False)
+        LOGGER.enable('dt_tools.net.net_helper')
+        log_format = lh.DEFAULT_DEBUG_LOGFMT
+
+    lh.configure_logger(log_level=log_level, log_format=log_format, brightness=False)
 
     version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), fg=ColorFG.WHITE2, style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
     console.print_line_separator(' ', 80)
