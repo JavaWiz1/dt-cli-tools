@@ -21,15 +21,19 @@ from dt_tools.misc.sun import Sun, SunTimeException
 
 def get_gps_coordinates(location: str) -> Union[GeoLocation, None]:
     geo = GeoLocation()
-    if location is None or len(location) == 0:
-        found = geo.get_location_via_ip()
+    try:
+        if location is None or len(location) == 0:
+            found = geo.get_location_via_ip()
 
-    elif location.isdecimal():
-        found = geo.get_location_via_zip(location)
+        elif location.isdecimal():
+            found = geo.get_location_via_zip(location)
 
-    else:
-        found = geo.get_location_via_address_string(location)
-
+        else:
+            found = geo.get_location_via_address_string(location)
+    
+    except Exception as ex:
+        found = False
+        LOGGER.debug(ex)    
 
     if found:
         LOGGER.debug(f'geo:\n{geo.to_string()}')
@@ -54,7 +58,7 @@ def display_date_info(location: str, date_string: str, sunrise: bool, sunset: bo
     time_str: str = ''
     sun = Sun(geo.lat, geo.lon)
     if len(location) > 0:
-        time_str += f'At {geo.display_location}, '
+        time_str += f'{geo.display_location}, '
             
     if date_string is None:
         date = datetime.now().date()
