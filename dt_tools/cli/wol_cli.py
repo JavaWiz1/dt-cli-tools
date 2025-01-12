@@ -102,10 +102,11 @@ def _print_device_dict(device_dict: Dict[str, _WOL_Device]):
     sorted_devices = {i: devices[i] for i in sorted_ips}
     # Display
     for entry in sorted_devices.values():
-        LOGGER.info(f"{entry.mac}  {entry.ip:15}  {entry.name}")
+        lvl = "INFO" if net_helper.ping(entry.name) else "WARNING"
+        LOGGER.log(lvl, f"{entry.mac}  {entry.ip:15}  {entry.name}")
 
     LOGGER.info('')
-    LOGGER.info(f'{len(device_dict.keys())} device entries.')
+    LOGGER.success(f'{len(device_dict.keys())} device entries.')
 
 def _save_device_dict(device_dict: Dict[str, _WOL_Device]) -> bool:
     LOGGER.info('  - Save updated device list')
@@ -239,6 +240,26 @@ def _dicts_equal(d1: dict, d2: dict) -> bool:
             are_equal = True
     return are_equal
 
+def _resolve_target(args: argparse.Namespace) -> str:    
+    ip = None
+    if args.mac:
+        mac = net_helper.format_mac(args.mac)
+        ip = net_helper.get_ip_from_mac(args.mac)
+        hostname = net_helper.get_hostname_from_ip(ip)
+    elif args.name:
+        hostname = args.name
+        ip = net_helper.get_ip_from_hostname(args.name)
+        mac = net_helper.get_mac_address(ip)
+    elif args.ip:
+        ip = args.ip
+        mac = net_helper.get_mac_address(ip)
+        hostname = net_helper.get_hostname_from_ip(ip)
+    
+    if ip is not None:
+        return f'[Host: {hostname}  ip: {ip}  mac: {mac}]'
+    
+    return ''
+
 # ================================================================================================    
 def main() -> int:
     c_handle = lh.configure_logger(log_level="INFO", log_format=lh.DEFAULT_CONSOLE_LOGFMT, brightness=False)
@@ -254,7 +275,7 @@ def main() -> int:
     input_group.add_argument('-c', '--clean', action='store_true', help='Clean cache of old entries')
     input_group.add_argument('-d', '--delete', action='store_true', help='Delete cache and re-create')
     parser.add_argument('-t','--timeout', type=int, default=45, help='Seconds to wait for device to come online')
-    parser.add_argument('-v','--verbose', action='store_true', help="Verbose logging")
+    parser.add_argument('-v','--verbose', action='count', default=0, help="Verbose logging, more v's, more verbose")
     
     try:
         args = parser.parse_args()
@@ -265,10 +286,14 @@ def main() -> int:
     LG_LEVEL = "INFO"
     end_tag = '\n'
 
-    if args.verbose:
-        LG_LEVEL = "DEBUG"
-        end_tag = ''
+    if args.verbose > 0:
         LOGGER.enable('dt_tools.net')
+        if args.verbose > 1:
+            if args.verbose == 2:
+                LG_LEVEL = "DEBUG"
+            else:
+                LG_LEVEL = "TRACE"
+            end_tag = ''
         lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_DEBUG_LOGFMT,log_handle=c_handle, brightness=False)
     
     LOGGER.info('')
@@ -288,22 +313,22 @@ def main() -> int:
             host = args.ip
         else:
             host = args.name.lower()
-        # if net_helper.ping(host):
-        #     LOGGER.info(f'{host} is already online.')
-        #     return True
-        
-        LOGGER.info(f'Sending WOL to {console.cwrap(host, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ',end=end_tag,flush=True)
-        success = wol.send_wol_to_host(host, wait_secs=args.timeout)
-        if not success:
-            LOGGER.error(f'- Unable to send to host: {wol.status_message}')
-            LOGGER.info('- Attempt to lookup host in cache...')
-            mac_entry = _lookup_mac_entry(host)
-            if mac_entry is not None:
-                LOGGER.info(f'  - {host} resolves to {mac_entry.mac}/{mac_entry.ip}')
-                LOGGER.info(f'Sending WOL to {console.cwrap(mac_entry.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ', end=end_tag, flush=True)
-                success = wol.send_wol_via_mac(mac_entry.mac, wait_secs=args.timeout, ip=mac_entry.ip)
-                if not success:
-                    LOGGER.error(f'- {wol.status_message}')
+        if net_helper.ping(host):
+            LOGGER.info(f'{host} is already online.')
+            success = True
+        else:
+            LOGGER.info(f'Sending WOL to {console.cwrap(host, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ',end=end_tag,flush=True)
+            success = wol.send_wol_to_host(host, wait_secs=args.timeout)
+            if not success:
+                LOGGER.error(f'- Unable to send to host: {wol.status_message}')
+                LOGGER.info('- Attempt to lookup host in cache...')
+                mac_entry = _lookup_mac_entry(host)
+                if mac_entry is not None:
+                    LOGGER.info(f'  - {host} resolves to {mac_entry.mac}/{mac_entry.ip}')
+                    LOGGER.info(f'Sending WOL to {console.cwrap(mac_entry.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])} ', end=end_tag, flush=True)
+                    success = wol.send_wol_via_mac(mac_entry.mac, wait_secs=args.timeout, ip=mac_entry.ip)
+                    if not success:
+                        LOGGER.error(f'- {wol.status_message}')
 
     elif args.list:
         LOGGER.warning('Display device list')
@@ -329,7 +354,10 @@ def main() -> int:
 
     LOGGER.info('')
     if success:
-        LOGGER.success('Successful.')
+        msg = 'Successful.'
+        if args.mac or args.ip or args.name:
+            msg += f'  {_resolve_target(args)}'
+        LOGGER.success(msg)
     else:
         LOGGER.error('Unsuccessful.')
 
