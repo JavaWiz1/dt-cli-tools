@@ -262,9 +262,14 @@ def main():
 
     lh.configure_logger(log_level=log_level, log_format=log_format, brightness=False)
 
-    version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), fg=ColorFG.WHITE2, style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
+    # version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), fg=ColorFG.WHITE2, style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
+    # console.print_line_separator(' ', 80)
+    # console.print_line_separator(f'{parser.prog} {version}', 80)
+
+    version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
     console.print_line_separator(' ', 80)
     console.print_line_separator(f'{parser.prog} {version}', 80)
+    console.print('')
 
     ret_cd = _validate_commandline_args(args)
     if ret_cd > 0:

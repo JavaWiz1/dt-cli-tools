@@ -1,7 +1,7 @@
 [tool.poetry]
 package-mode = true 
 name = "dt-cli-tools"
-version = "0.1.18"
+version = "0.1.19"
 description = "Various CLIs created from dt-* packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
@@ -45,6 +45,7 @@ speak = 'dt_tools.cli.speak_cli:main'
 weather-cli = 'dt_tools.cli.weather_cli:main'
 wol-cli = 'dt_tools.cli.wol_cli:main'
 what-time = 'dt_tools.cli.what_time_cli:main'
+sound-gauge = 'dt_tools.cli.sound_gauge_cli:main'
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,8 +1,45 @@
 """
-Command line time utility
+Command line time utility.
+
+Displays current time.  Additional can display sunrise/sunset on any
+specific date or location.
+
+**Usage**:
+
+    what-time [-h] [-sr] [-ss] [-d DATE] [-s] [-v] [where ...]
+
+    positional arguments:
+    where                 Location - address, zip code, landmark,...
+
+    options:
+    -h, --help            show this help message and exit
+    -sr, --sunrise        Display sunrise time
+    -ss, --sunset         Display sunset time
+    -d DATE, --date DATE  Target date (implies -sr and -ss)
+    -s, --speak           Vocalize the time.
+    -v, --verbose         Verbose logging
+
+Examples:
+
+    # What time is it now
+    > what-time
+    The time is 06:42 PM EST.
+
+    # What time is sunrise/sunset on a specific date
+    > what-time -d 2/2/25
+    on February 02 2025, sunrise is at 07:16 AM EST, sunset is at 06:05 PM EST.
+
+    # What time is it in specific location
+    > what-time Cairo
+    Cairo in Egypt, the time is 01:39 AM EET.
+
+    # When is sunrise/sunset in specific location on specific date   
+    > what-time -d 2/2/25 London England
+    London England in United Kingdom, on February 02 2025, sunrise is at 07:38 AM GMT, sunset is at 04:51 PM GMT.
 
 Returns:
-    _type_: _description_
+    str: Query results or error message on invalid/non-specific input.
+
 """
 
 import argparse
@@ -14,9 +51,9 @@ from dateutil import parser as dt_parser
 from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
-from dt_tools.misc.geoloc import GeoLocation
-from dt_tools.misc.sound import Sound
-from dt_tools.misc.sun import Sun, SunTimeException
+from dt_tools.geoloc.geoloc import GeoLocation
+from dt_tools.sound.helper import Sound
+from dt_tools.geoloc.sun import Sun, SunTimeException
 
 
 def get_gps_coordinates(location: str) -> Union[GeoLocation, None]:

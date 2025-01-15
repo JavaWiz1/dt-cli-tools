@@ -74,6 +74,7 @@ Simply provide:
 import argparse
 import sys
 import textwrap
+from dataclasses import asdict
 from datetime import datetime as dt
 from typing import Tuple
 
@@ -81,17 +82,17 @@ from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
 from dt_tools.console.console_helper import ConsoleHelper, TextStyle
-from dt_tools.misc.geoloc import GeoLocation
-from dt_tools.misc.sound import Accent, Sound
-from dt_tools.misc.weather.common import WeatherSymbols as ws
-from dt_tools.misc.weather.weather import CurrentConditions
-from dt_tools.misc.weather.weather_forecast_alert import (
+from dt_tools.geoloc.geoloc import GeoLocation
+from dt_tools.os.project_helper import ProjectHelper
+from dt_tools.sound.helper import Accent, Sound
+from dt_tools.weather.common import ForecastType
+from dt_tools.weather.common import WeatherSymbols as ws
+from dt_tools.weather.weather import CurrentConditions
+from dt_tools.weather.weather_forecast_alert import (
     Forecast,
     ForecastDay,
-    ForecastType,
     LocationAlerts,
 )
-from dt_tools.os.project_helper import ProjectHelper
 
 
 # ==  Helper Routines  ===================================================================================
@@ -160,15 +161,19 @@ def _get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float, str]:
 
     geo = GeoLocation()
     if args.ip:
+        LOGGER.debug('- get geoloc based on ip.')
         if geo.get_location_via_ip():
             lat = geo.lat
             lon = geo.lon
+            place = geo.display_name
     elif args.address:
+        LOGGER.debug('- get geoloc based on address.')
         if geo.get_location_via_address_string(args.address):
             lat = geo.lat
             lon = geo.lon
             place = args.address
     elif args.gps:
+        LOGGER.debug('- get geoloc based on gps coordinates')
         x, y = args.gps.split(',')
         try:
             lat = float(x)
@@ -177,7 +182,7 @@ def _get_gps_coordinates(args: argparse.Namespace) -> Tuple[float, float, str]:
             lat = 0.0
             lon = 0.0
 
-    LOGGER.debug(f'Geo:\n{geo.to_string()}')
+    LOGGER.debug(f'GeoLoc:\n{geo.to_string()}')
     return (lat, lon, place)
 
 def _valid_gps_coordinates(lat: float, lon: float) -> bool:
@@ -185,6 +190,7 @@ def _valid_gps_coordinates(lat: float, lon: float) -> bool:
 
 # ==  Weather Current Conditions  ========================================================================
 def _get_current_weather(args: argparse.Namespace) -> bool:
+    LOGGER.debug('_get_current_weather(): retrieve gps coordinates')
     lat, lon, place = _get_gps_coordinates(args)
     if not _valid_gps_coordinates(lat, lon):
         LOGGER.error('Unable to determine location.')
@@ -193,8 +199,9 @@ def _get_current_weather(args: argparse.Namespace) -> bool:
     weather = CurrentConditions()    
     weather.set_location_via_lat_lon(lat, lon)
     LOGGER.success(f'Current weather conditions for {dt.strftime(dt.now(),"%A - %H:%M %p")}')
-    LOGGER.warning(f'weather:\n{weather.to_string()}')
-    LOGGER.info(f'  {weather.loc_name} {weather.loc_region}. [{weather.lat_long}]')
+    LOGGER.trace(f'weather:\n{asdict(weather)}')
+    location = f"{weather.loc_name} {weather.loc_region}" if place is None else place
+    LOGGER.info(f'  {location}. [{weather.lat_long}]')
     LOGGER.info('')
     for line in weather.to_string().splitlines():
         LOGGER.info(f'  {line}')
@@ -216,6 +223,7 @@ def _speak_current_conditions(weather: CurrentConditions, args: argparse.Namespa
             content += f'{weather.precipitation} inches of precipitation.\n'
         content += f'  Visibility {weather.visibility_mi} miles.\n'
         content += f'  Wind {ws.translate_compass_point(weather.wind_direction)} {weather.wind_speed_mph:.0f} mph, gusts up to {weather.wind_gust_mph:.0f} mph.\n'
+        content += f'  Sunrise at {weather.sunrise.strftime("%I:%M%p")}, Sunset at {weather.sunset.strftime("%I:%M%p")}'
     return _speak(content, accent_cd=args.accent, wait=False)
 
 
@@ -314,6 +322,8 @@ def _get_weather_alerts(args: argparse.Namespace) -> bool:
 
 # ==================================================================================================================
 def main() -> bool:
+    DEFAULT_DEBUG_LOGFMT2 =  "<green>{time:HH:mm:ss}</green> |<level>{level: <8}</level>|<cyan>{name:15}|{module:20}|{line:4}</cyan>| <level>{message}</level>"
+
     parser = _build_command_line_parser()    
     args = parser.parse_args()
     version = f'{ConsoleHelper.cwrap(ProjectHelper.determine_version("dt-cli-tools"), style=TextStyle.ITALIC)}'
@@ -325,12 +335,12 @@ def main() -> bool:
         l_format = lh.DEFAULT_CONSOLE_LOGFMT
     elif args.verbose == 1:
         l_level = "DEBUG"
-        l_format = lh.DEFAULT_DEBUG_LOGFMT
+        l_format = DEFAULT_DEBUG_LOGFMT2
     else:
         l_level = "TRACE"
         l_format = lh.DEFAULT_DEBUG_LOGFMT
 
-    lh.configure_logger(log_level=l_level, log_format=l_format, brightness=False)
+    lh.configure_logger(log_level=l_level, log_format=l_format, brightness=False, disable_loggers=['logging'])
     LOGGER.debug(f'args: {args}')    
     try:
         Accent(args.accent)
