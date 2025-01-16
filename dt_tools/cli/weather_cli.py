@@ -216,7 +216,10 @@ def _speak_current_conditions(weather: CurrentConditions, args: argparse.Namespa
     time_now = dt.now().strftime("%I:%M%p")
 
     content = f"Current conditions in {weather.loc_name} at {time_now}.\n"
-    content += f"  {weather.condition}.  Temperature {weather.temp:.0f}{ws.degree.value}, feels like {weather.feels_like:.0f}{ws.degree.value}.\n"
+    if int(weather.temp) == int(weather.feels_like):
+        content += f"  {weather.condition}.  Temperature {weather.temp:.0f}{ws.degree.value}.\n"
+    else:
+        content += f"  {weather.condition}.  Temperature {weather.temp:.0f}{ws.degree.value}, feels like {weather.feels_like:.0f}{ws.degree.value}.\n"
     if not args.summary:
         content += f'  {weather.humidity_pct:.0f}% humidity, air quality is {weather.aqi_text}.\n'
         if weather.precipitation > 0.0:
