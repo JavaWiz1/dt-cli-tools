@@ -326,21 +326,26 @@ def main() -> bool:
 
     parser = _build_command_line_parser()    
     args = parser.parse_args()
+    if args.verbose == 0:
+        l_level = "INFO"    
+        l_format = lh.DEFAULT_CONSOLE_LOGFMT
+        enable_loggers = None
+    elif args.verbose == 1:
+        l_level = "DEBUG"
+        l_format = DEFAULT_DEBUG_LOGFMT2
+        enable_loggers = ['dt_tools']
+    else:
+        l_level = "TRACE"
+        l_format = lh.DEFAULT_DEBUG_LOGFMT
+        enable_loggers = ['dt_tools']
+
+    lh.configure_logger(log_level=l_level, log_format=l_format, brightness=False, 
+                        enable_loggers=enable_loggers, disable_loggers=['logging'])
+
     version = f'{ConsoleHelper.cwrap(ProjectHelper.determine_version("dt-cli-tools"), style=TextStyle.ITALIC)}'
     ConsoleHelper.print_line_separator(length=80)
     ConsoleHelper.print_line_separator(f'{parser.prog}  (v{version})', 80)
     success = False
-    if args.verbose == 0:
-        l_level = "INFO"    
-        l_format = lh.DEFAULT_CONSOLE_LOGFMT
-    elif args.verbose == 1:
-        l_level = "DEBUG"
-        l_format = DEFAULT_DEBUG_LOGFMT2
-    else:
-        l_level = "TRACE"
-        l_format = lh.DEFAULT_DEBUG_LOGFMT
-
-    lh.configure_logger(log_level=l_level, log_format=l_format, brightness=False, disable_loggers=['logging'])
     LOGGER.debug(f'args: {args}')    
     try:
         Accent(args.accent)
