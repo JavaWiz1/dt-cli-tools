@@ -264,7 +264,7 @@ def _resolve_target(args: argparse.Namespace) -> str:
 def main() -> int:
     c_handle = lh.configure_logger(log_level="INFO", log_format=lh.DEFAULT_CONSOLE_LOGFMT, brightness=False)
     OSHelper.enable_ctrl_c_handler()
-    version = ProjectHelper.determine_version('dt_cli_tools')
+    version = ProjectHelper.determine_version('dt-cli-tools')
     parser = argparse.ArgumentParser(prog='wol-cli', description=f'Wake-on-Lan CLI  v{version}')
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument('-m', '--mac', type=str, help='Wake via MAC Address')
@@ -296,9 +296,8 @@ def main() -> int:
             end_tag = ''
         lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_DEBUG_LOGFMT,log_handle=c_handle, brightness=False)
     
-    LOGGER.info('')
-    LOGGER.info(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}')
-    LOGGER.info('')
+    LOGGER.debug('')
+    LOGGER.debug(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}')
 
     success = False
     wol = WOL()
@@ -354,12 +353,12 @@ def main() -> int:
 
     LOGGER.info('')
     if success:
-        msg = 'Successful.'
+        msg = 'Online.'
         if args.mac or args.ip or args.name:
             msg += f'  {_resolve_target(args)}'
         LOGGER.success(msg)
     else:
-        LOGGER.error('Unsuccessful.')
+        LOGGER.error('Offline.')
 
     return success
 

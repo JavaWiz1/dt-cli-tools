@@ -97,8 +97,7 @@ from dt_tools.weather.weather_forecast_alert import (
 
 # ==  Helper Routines  ===================================================================================
 def _build_command_line_parser() -> argparse.ArgumentParser:
-    version = ProjectHelper.determine_version('dt-cli-tools')
-    epilog = f"Weather CLI Utility (v{version})\n"
+    epilog = "Weather CLI Utility\n"
     epilog += "----------------------------------------------------------------------------------------\n"
     epilog += "This utility will provide weather information (current, forecast or alerts) based\n"
     epilog += "on provided location.  It can also vocalize the information by adding the -speak option.\n\n"
@@ -325,8 +324,6 @@ def _get_weather_alerts(args: argparse.Namespace) -> bool:
 
 # ==================================================================================================================
 def main() -> bool:
-    DEFAULT_DEBUG_LOGFMT2 =  "<green>{time:HH:mm:ss}</green> |<level>{level: <8}</level>|<cyan>{name:15}|{module:20}|{line:4}</cyan>| <level>{message}</level>"
-
     parser = _build_command_line_parser()    
     args = parser.parse_args()
     if args.verbose == 0:
@@ -335,7 +332,7 @@ def main() -> bool:
         enable_loggers = None
     elif args.verbose == 1:
         l_level = "DEBUG"
-        l_format = DEFAULT_DEBUG_LOGFMT2
+        l_format = lh.DEFAULT_DEBUG_LOGFMT2
         enable_loggers = ['dt_tools']
     else:
         l_level = "TRACE"
