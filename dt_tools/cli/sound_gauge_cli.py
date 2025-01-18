@@ -35,7 +35,7 @@ from dt_tools.misc.helpers import StringHelper as sh
 from dt_tools.os.project_helper import ProjectHelper
 from dt_tools.sound.detector import SampleRate, SoundDefault, SoundDetector
 
-MAX_SAMPLES: int = 1500
+MAX_SAMPLES: int = 150
 rows, columns = con.get_console_size()
 PROGRESS_BAR_LEN = int(columns / 1.25)
 
@@ -112,6 +112,8 @@ def main() -> int:
     parser.add_argument('-r', '--rate', choices=SampleRate.rate_values(), default=SoundDefault.SAMPLE_RATE,
         help=f'Freq/number of frames captured per second. [{",".join(rates_str)}]  Default {SoundDefault.SAMPLE_RATE}.',
         metavar='RATE')
+    parser.add_argument('-o', '--output', type=str, required=False, default='',
+        metavar='PATH', help='Capture data output path.')
     args = parser.parse_args()
 
     version = f"(v{con.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
@@ -119,9 +121,15 @@ def main() -> int:
     con.print_line_separator(f'{parser.prog} {version}', 80)
     con.print('')
 
-    # con.print('')
-    # con.print_line_separator('Sound Gauge', PROGRESS_BAR_LEN)
     display_intro()
+    capture_path = None
+    if args.output != '':
+        import pathlib  
+        capture_path = pathlib.Path(args.output)
+        if not capture_path.is_dir():
+            con.print('- Output parameter is not path, ignored.', fg=ColorFG.RED2)
+            con.print('')
+            capture_path = None
 
     con.print_with_wait('Sound detection will begin in 10 seconds...', wait=10.0, eol='')
     con.clear_line()
@@ -130,6 +138,9 @@ def main() -> int:
         pb = ProgressBar('gauge', bar_length=PROGRESS_BAR_LEN, max_increments=100, show_elapsed=True, show_pct=False)
         smon = SoundDetector(frame_count=args.size,
                              sample_rate=args.rate)
+        if capture_path is not None:
+            smon.capture_path = capture_path
+            smon.capture_data = True
         detect_sound(pb, smon)
     except KeyboardInterrupt:
         pass
@@ -156,7 +167,8 @@ def main() -> int:
     con.print('')
     con.print(f'  Elapsed capture time : {smon.elapsed_monitoring_seconds} seconds.')
     con.print(f'  Suggested Threshold  : {suggested_threshold}')
-    
+    if capture_path is not None:
+        con.print(f'  Captured data        : {smon._capture_file}')    
     return 0
 
 if __name__ == '__main__':
