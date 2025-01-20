@@ -296,7 +296,9 @@ def main() -> int:
     con.print(f'  Avg: {Stats.avg_db:6.2f}')
     con.print(f'  Std: {Stats.std_db:6.2f}')
     con.print('')
-    con.print(f'  Elapsed capture time : {smon.elapsed_monitoring_seconds} seconds')
+    con.print(f'  Elapsed time         : {smon.elapsed_monitoring_seconds} seconds.')
+    con.print(f'  Microphone           : {smon.microphone_name} [{smon.microphone_id}]')
+    con.print('')
     if smon._sound_threshold != 999:
         con.print(f'  Sound     Threshold  : {smon._sound_threshold:2} db')
     con.print(f'  Suggested Threshold  : {suggested_threshold:2} db')
