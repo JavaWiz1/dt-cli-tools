@@ -38,7 +38,7 @@ from dt_tools.misc.helpers import StringHelper as sh
 from dt_tools.os.project_helper import ProjectHelper
 from dt_tools.sound.detector import SampleRate, SoundDefault, SoundDetector
 
-MAX_SAMPLES: int = 150
+DEFAULT_SAMPLE_LIMIT: int = 150
 rows, columns = con.get_console_size()
 PROGRESS_BAR_LEN = int(columns / 1.25)
 SOUND_DETECTED: str = '      '
@@ -46,11 +46,12 @@ _sound_eyecatcher = con.cwrap('Sound!',fg=ColorFG.YELLOW2)
 
 class Stats:
     text: str    = ''
-    min_rms: int = 0
-    max_rms: int = 0
-    avg_rms: int = 0
-    std_rms: int = 0
+    min_db: int = 0
+    max_db: int = 0
+    avg_db: int = 0
+    std_db: int = 0
     sample_cnt: int = 0
+
 
 def _wrap_stat(val: float) -> str:
     s_val = f'{val:5.2f}'
@@ -69,31 +70,32 @@ def detect_sound(pb: ProgressBar, smon: SoundDetector) -> str:
         con.print('Listening... (ctrl-c to quit)',fg=ColorFG.GREEN)
         con.print('')
         
-        pb.display_progress(0)
+        # pb.display_progress(0)
         sample_set: list = []
-        Stats.min_rms = 99
-        Stats.max_rms = -1
-        while MAX_SAMPLES > len(sample_set):
-            rms = smon.current_audio_rms
-            sample_set.append(rms)
+        Stats.min_db = 140
+        Stats.max_db = 0
+        while smon.sample_limit > len(sample_set):
+            loudness_db = smon.loudness
+            sample_set.append(loudness_db)
 
-            Stats.avg_rms = np.average(sample_set)
-            Stats.std_rms = np.std(sample_set)
-            if rms > 0:
-                Stats.min_rms = min(Stats.min_rms, rms)
-            Stats.max_rms = max(Stats.max_rms, rms)
+            Stats.avg_db = np.average(sample_set)
+            Stats.std_db = np.std(sample_set)
+            if loudness_db > 0:
+                Stats.min_db = min(Stats.min_db, loudness_db)
+            Stats.max_db = max(Stats.max_db, loudness_db)
             num_samples = con.cwrap(len(sample_set), fg=ColorFG.RED2)
-            status_line = f'RMS: {_wrap_stat(rms)}   ' + \
-                          f'Min: {_wrap_stat(Stats.min_rms)}   ' + \
-                          f'Max: {_wrap_stat(Stats.max_rms)}   ' + \
-                          f'Avg: {_wrap_stat(Stats.avg_rms)}   ' + \
-                          f'STD: {_wrap_stat(Stats.std_rms)}   ' + \
+            status_line = f'Decibels: {_wrap_stat(loudness_db)}   ' + \
+                          f'Min: {_wrap_stat(Stats.min_db)}   ' + \
+                          f'Max: {_wrap_stat(Stats.max_db)}   ' + \
+                          f'Avg: {_wrap_stat(Stats.avg_db)}   ' + \
+                          f'STD: {_wrap_stat(Stats.std_db)}   ' + \
                           f'Samples: {num_samples:3} {SOUND_DETECTED:6}'
+            
             SOUND_DETECTED = ''
             non_print_char_cnt = len(status_line) - len(con.remove_nonprintable_characters(status_line))
-            status_line = sh.center(status_line, PROGRESS_BAR_LEN + non_print_char_cnt)
-            Stats.text = status_line
-            pb.display_progress(min(rms, 100))
+            status_line        = sh.center(status_line, PROGRESS_BAR_LEN + non_print_char_cnt)
+            Stats.text         = status_line
+            pb.display_progress(min(loudness_db, 140))
             con.cursor_off()
             row,col = con.cursor_current_position()
             con.print_at(row+1, 0, status_line)
@@ -103,10 +105,6 @@ def detect_sound(pb: ProgressBar, smon: SoundDetector) -> str:
         
         return status_line
 
-# def default_microphone_index() -> int:
-#     pa = pyaudio.PyAudio()
-#     host_info = pa.get_default_host_api_info()
-#     return int(host_info.get('defaultInputDevice', -1))
 
 def audio_device_report():
     pa = pyaudio.PyAudio()
@@ -149,35 +147,64 @@ def audio_device_report():
     LOGGER.info('         hi lat: Default High Input Latency  ho lat: Default High Output Latency')
     LOGGER.info('')
 
-def display_intro(smon: SoundDetector):
+def display_intro(smon: SoundDetector, decibel_info: str = None):
     con.print('')
-    con.print("This routine will listen for sound and display the relative output levels")
+    con.print('Each environment has a relative ambient level of sound.  Each microphone is different')
+    con.print('in its ability to detect and capture sound.')
+    con.print('')
+    con.print("This routine will listen for sound and display the relative input levels (in decibels)")
     con.print('so that you can better gauge what silence vs. sound thresholds are.')
     con.print('')
-    con.print("The 'sound_threshold' can be set using the parameters that are derived from this monitor.")
-    con.print('')
-    con.print(f'{MAX_SAMPLES} samples will be taken, or you may stop at any time with ctrl-c.')
-    con.print('')
+
+    con.print(f'{smon.sample_limit} samples will be taken, or you may stop at any time with ctrl-c.')
+    if decibel_info is not None:
+        con.print('')
+        con.print(decibel_info)
 
 def main() -> int:
+    import textwrap
     rates_str = [str(rate) for rate in SampleRate.rate_values()]
     microphone_id = SoundDetector().default_microphone_id
-    parser = argparse.ArgumentParser()
+    description = textwrap.dedent('''\
+        This utility identifies loudness picked up by the microphone (in decibels), so that the
+        user can better determine the threshold between sound and silence for presence detection.
+        ''')
+    decibel_info = textwrap.dedent('''\
+            Range        Description
+            ----------  ------------------------------------------------------------------     
+                  0 dB  The softest sound a person with normal hearing can hear
+                 10 dB  Normal breathing
+                 20 dB  Leaves rustling, a ticking watch
+                 30 dB  A whisper
+                 40 dB  Refrigerator hum, a quiet office
+                 50 dB  Moderate rainfall, a normal conversation
+                 60 dB  Dishwashers, a normal conversation
+                 70 dB  A washing machine, a car driving at 60 mph, an office environment
+                 80 dB  A police car siren, a noisy restaurant
+                 90 dB  Hairdryers, blenders, power tools
+                100 dB  Motorcycles, hand dryers
+                110 dB  Nightclubs, sporting events
+            120–140 dB  Painful / dangerous sounds like thunder, concerts, ambulances,...
+             ''')
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-i', '--info', action='store_true', default=False, 
         help='Show audio devices info and exit.')
+    parser.add_argument('-di', '--decibel_info', action='store_true', default=False,
+        help='Show decibel information definitions and exit.')
     parser.add_argument('-m', '--microphone_id', type=int, default=microphone_id,
         help='Microphone ID (see --info)', metavar='ID')
     parser.add_argument('-t', '--threshold', type=int, default=999,
-        help='Testing threshold (999 ignore)', metavar='RMS')
-    parser.add_argument('-s', '--size', type=int, default=SoundDefault.FRAME_COUNT, 
-        help    =f'Sample buffer size.  Default {SoundDefault.FRAME_COUNT} bytes')    
-    parser.add_argument('-r', '--rate', choices=SampleRate.rate_values(), default=SoundDefault.SAMPLE_RATE,
+        help='Testing sound detected threshold in db (999 ignore)', metavar='DB')
+    parser.add_argument('-fc', '--frame_count', type=int, default=SoundDefault.FRAME_COUNT, 
+        help    =f'Numer of frames in the buffer.  Default {SoundDefault.FRAME_COUNT}')    
+    parser.add_argument('-fr', '--frequency_rate', choices=SampleRate.rate_values(), default=SoundDefault.SAMPLE_RATE,
         help=f'Freq/number of frames captured per second. [{",".join(rates_str)}]  Default {SoundDefault.SAMPLE_RATE}.',
         metavar='RATE')
+    parser.add_argument('-sl', '--sample_limit', type=int, default=DEFAULT_SAMPLE_LIMIT,
+        help=f'Number of samples to collect. (default {DEFAULT_SAMPLE_LIMIT})', metavar='LIMIT')
     parser.add_argument('-o', '--output', type=str, required=False, default='',
-        metavar='PATH', help='Capture data output path.')
+        metavar='DIR', help='Enable data capture and save results in output directory.')
     parser.add_argument('-v', '--verbose', action='count', default=0, help=argparse.SUPPRESS)
-
     args = parser.parse_args()
     if args.verbose == 0:
         log_level = "INFO"
@@ -195,6 +222,7 @@ def main() -> int:
     lh.configure_logger(log_level=log_level, log_format=log_format, brightness=False, enable_loggers=enable_loggers)
 
     version = f"(v{con.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
+    con.clear_screen()
     con.print_line_separator(' ', 80)
     con.print_line_separator(f'{parser.prog} {version}', 80)
     if args.microphone_id < 0:
@@ -204,19 +232,23 @@ def main() -> int:
     if args.info:
         audio_device_report()
         return 0
-    
+    if args.decibel_info:
+        con.print('')
+        con.print(decibel_info)
+        return 0
+
     smon = SoundDetector(microphone_id=args.microphone_id,
-                            frame_count=args.size,
-                            sample_rate=args.rate,
+                            frame_count=args.frame_count,
+                            sample_rate=args.frequency_rate,
                             sound_threshold=args.threshold,
                             sound_trigger_callback=heard_sound)
     
+    smon.sample_limit = args.sample_limit
     if LOGGER.log_level != "INFO":
         smon._output_settings()
         con.print('')
-        sleep(5)
         
-    display_intro(smon)
+    display_intro(smon, decibel_info)
     capture_path = None
     if args.output != '':
         capture_path = pathlib.Path(args.output)
@@ -229,8 +261,9 @@ def main() -> int:
     for sec in range(10,0,-1):
         con.print_with_wait(f'Sound detection will begin in {sec} seconds...', wait=1.0, eol='\r')
     con.clear_line()
+
     try:
-        pb = ProgressBar('gauge', bar_length=PROGRESS_BAR_LEN, max_increments=100, show_elapsed=True, show_pct=False)
+        pb = ProgressBar('Loudness', bar_length=PROGRESS_BAR_LEN, max_increments=140, show_elapsed=True, show_pct=False)
         if capture_path is not None:
             smon.capture_path = capture_path
             smon.capture_data = True
@@ -240,7 +273,6 @@ def main() -> int:
     except Exception as ex:
         con.print('')
         con.print(con.cwrap(ex, ColorFG.RED2))
-
     finally:
         con.cursor_set_shape(CursorShape.STEADY_BAR)
         pb.cancel_progress()
@@ -248,22 +280,31 @@ def main() -> int:
         con.cursor_on()
         smon.stop()
 
-    upper = (Stats.max_rms - Stats.std_rms)
-    lower = (Stats.avg_rms + Stats.std_rms)
-    suggested_threshold = int(((upper - lower) / 2) + lower)
+    upper = (Stats.max_db - Stats.std_db)
+    lower = (Stats.avg_db + Stats.std_db)
+    try:
+        suggested_threshold = int(((upper - lower) / 2) + lower)
+    except ValueError as ve:
+        LOGGER.warning(ve)
+        LOGGER.warning(f'- upper: {upper}  lower: {lower}')
+        LOGGER.warning(f'- max_db: {Stats.max_db}  avg_db: {Stats.avg_db}  std_db: {Stats.std_db}')
+        suggested_threshold = 'n/a'
     con.print('')
-    con.print('Summary')
-    con.print(f'  Min: {Stats.min_rms:6.2f}')
-    con.print(f'  Max: {Stats.max_rms:6.2f}')
-    con.print(f'  Avg: {Stats.avg_rms:6.2f}')
-    con.print(f'  Std: {Stats.std_rms:6.2f}')
+    con.print('Summary (in decibels)')
+    con.print(f'  Min: {Stats.min_db:6.2f}')
+    con.print(f'  Max: {Stats.max_db:6.2f}')
+    con.print(f'  Avg: {Stats.avg_db:6.2f}')
+    con.print(f'  Std: {Stats.std_db:6.2f}')
     con.print('')
-    con.print(f'  Elapsed capture time : {smon.elapsed_monitoring_seconds} seconds.')
+    con.print(f'  Elapsed capture time : {smon.elapsed_monitoring_seconds} seconds')
     if smon._sound_threshold != 999:
-        con.print(f'  Sound     Threshold  : {smon._sound_threshold}')
-    con.print(f'  Suggested Threshold  : {suggested_threshold}')
+        con.print(f'  Sound     Threshold  : {smon._sound_threshold:2} db')
+    con.print(f'  Suggested Threshold  : {suggested_threshold:2} db')
     if capture_path is not None:
         con.print(f'  Captured data        : {smon._capture_file}')    
+
+    con.print('')
+    con.print('NOTE: use -di to display decibel level descriptions...')
     return 0
 
 if __name__ == '__main__':
