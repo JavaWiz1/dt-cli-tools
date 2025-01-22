@@ -232,6 +232,28 @@ def _clean_device_cache() -> bool:
         _save_device_dict(updated_cache)
     return True
 
+def _edit_device_cache() -> bool:
+    if OSHelper.is_windows():
+        notepad = OSHelper.is_executable_available('notepad')
+        if notepad is None:
+            rc = -1
+            output = ['Notepad executable not found in path.']
+        else:
+            rc, output = OSHelper.run_command(f'{notepad} {MAC_INFO_LOCATION}')
+    else:
+        nano = OSHelper.is_executable_available('nano')
+        if nano is None:
+            rc = -1
+            output = ['Notepad executable not found in path.']
+        else:
+            rc, output = OSHelper.run_command(f'{nano} {MAC_INFO_LOCATION}')
+
+    if rc != 0:
+        LOGGER.error(f'Unable to edit {MAC_INFO_LOCATION}')
+        for line in output:
+            LOGGER.warning(f'  {line}')
+    return rc == 0
+
 def _dicts_equal(d1: dict, d2: dict) -> bool:
     are_equal = False
     if len(d1.keys()) == len(d2.keys()):
@@ -267,17 +289,19 @@ def main() -> int:
     version = ProjectHelper.determine_version('dt-cli-tools')
     parser = argparse.ArgumentParser(prog='wol-cli', description=f'Wake-on-Lan CLI  v{version}')
     input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument('-m', '--mac', type=str, help='Wake via MAC Address')
+    input_group.add_argument('-m', '--mac',  type=str, help='Wake via MAC Address')
     input_group.add_argument('-n', '--name', type=str, help='Wake via Hostname')
-    input_group.add_argument('-i', '--ip', type=str, help='Wake via IP Address')
-    input_group.add_argument('-l', '--list', action='store_true', help='List WOL cache')
-    input_group.add_argument('-s', '--scan', action='store_true', help='Scan and create/update WOL cache')
-    input_group.add_argument('-c', '--clean', action='store_true', help='Clean cache of old entries')
+    input_group.add_argument('-i', '--ip',   type=str, help='Wake via IP Address')
+    input_group.add_argument('-l', '--list',   action='store_true', help='List WOL cache')
+    input_group.add_argument('-s', '--scan',   action='store_true', help='Scan and create/update WOL cache')
+    input_group.add_argument('-c', '--clean',  action='store_true', help='Clean cache of old entries')
+    input_group.add_argument('-e', '--edit',   action='store_true', help='Edit the cache')
     input_group.add_argument('-d', '--delete', action='store_true', help='Delete cache and re-create')
     parser.add_argument('-t','--timeout', type=int, default=45, help='Seconds to wait for device to come online')
     parser.add_argument('-v','--verbose', action='count', default=0, help="Verbose logging, more v's, more verbose")
     
     try:
+        sys.argv.append('-e')
         args = parser.parse_args()
     except (argparse.ArgumentError, IndexError) as ae:
         LOGGER.critical(repr(ae))
@@ -286,15 +310,21 @@ def main() -> int:
     LG_LEVEL = "INFO"
     end_tag = '\n'
 
+
     if args.verbose > 0:
-        LOGGER.enable('dt_tools.net')
         if args.verbose > 1:
             if args.verbose == 2:
                 LG_LEVEL = "DEBUG"
+                LG_FORMAT = lh.DEFAULT_DEBUG_LOGFMT
             else:
                 LG_LEVEL = "TRACE"
+                LG_FORMAT = lh.DEFAULT_DEBUG_LOGFMT2
             end_tag = ''
-        lh.configure_logger(log_level=LG_LEVEL, log_format=lh.DEFAULT_DEBUG_LOGFMT,log_handle=c_handle, brightness=False)
+
+        lh.configure_logger(log_level=LG_LEVEL, 
+                            log_format=LG_FORMAT,
+                            enable_loggers=['dt_tools'],
+                            brightness=False)
     
     LOGGER.debug('')
     LOGGER.debug(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}')
@@ -342,6 +372,10 @@ def main() -> int:
     elif args.clean:
         LOGGER.warning('Cache clean requested')
         success = _clean_device_cache()
+
+    elif args.edit:
+        LOGGER.warning('Edit cache requested')
+        success = _edit_device_cache()
 
     elif args.delete:
         LOGGER.error('Cache delete requested')

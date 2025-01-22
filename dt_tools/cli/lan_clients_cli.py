@@ -67,7 +67,11 @@ from dt_tools.console.console_helper import ColorFG
 from dt_tools.console.console_helper import ConsoleHelper as console
 from dt_tools.console.console_helper import TextStyle
 from dt_tools.console.spinner import Spinner
+from dt_tools.net.ip_info_helper import IpHelper as ih
+import dt_tools.net.net_helper as nh
+from dt_tools.net.ip_info_helper import MAC_INFO_LOCATION
 from dt_tools.net.net_helper import LAN_Client
+from dt_tools.os.os_helper import OSHelper
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
 
@@ -140,6 +144,8 @@ def _queue_item_worker(name: str):
         ip_address = lan_entry.ip # ip_queue.get()
         host_name = 'unknown' if lan_entry.hostname is None else lan_entry.hostname
         mac = 'unknown' if lan_entry.mac is None else lan_entry.mac
+        if mac != 'unknown' and lan_entry.vendor is None:
+            lan_entry.vendor = nh.get_vendor_from_mac(mac)
         vendor = 'unknown' if lan_entry.vendor is None else lan_entry.vendor
         item_line = f'{ip_address:15} {host_name:28} {mac:17}  {vendor}'
         if 'unknown' in host_name or 'unknown' in vendor:
@@ -189,6 +195,14 @@ def _dump_resolved_hosts_to_file(out_filename: str) -> bool:
 
     return success
 
+def _edit_mac_cache():
+    editor = 'notepad' if OSHelper.is_windows() else 'nano'
+    editor_exe = OSHelper.is_executable_available(editor)
+    if editor_exe is None:
+        LOGGER.warning(f'Unable to edit cache.  {editor} not found.')
+        return
+    OSHelper.run_command(f'{editor_exe} {MAC_INFO_LOCATION}')
+    
 def _signal_handler(signum, frame):
     print('CTRL-C: Waiting for threads to stop...')
     stop_event.set()
@@ -205,7 +219,9 @@ def main() -> int:
     parser.add_argument('-b', '--broadcast', action='store_true', default=False, 
                             help='Use ARP Broadcast vs Cache to identify clients')
     parser.add_argument('-l', '--list', action='store_true', default=False,
-                            help='List contents of user maintained MAC cache')
+                            help='List user maintained MAC cache')
+    parser.add_argument('-e', '--edit', action ='store_true', 
+                            help='Edit user maintained MAC cache')
     parser.add_argument('-s', '--sort', choices=['ip','hostname','mac','vendor'], default='ip', 
                             help='Sort key (default ip)')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -224,11 +240,12 @@ def main() -> int:
     console.print_line_separator(f'{parser.prog} {version}', 80)
     console.print('')
     if args.list:
-        from dt_tools.net.ip_info_helper import IpHelper as ih
         LOGGER.enable('dt_tools.net.ip_info_helper')
         ih().list_mac_cache()
         return 0
-    
+    if args.edit:
+        _edit_mac_cache()
+        return 0
     start = time.time()
     sort_key = SORT_KEY[args.sort.upper()]
     num_clients = _build_queue(args.broadcast, sort_key=sort_key)

@@ -137,9 +137,10 @@ def _process_host_connection(host_connection: str, wait: float = 1.0, only_open:
     
     host = tokens[0]
     if not net_helper.is_valid_host(host):
-        LOGGER.info('')
-        LOGGER.warning(f'{host:20} invalid, could not resolve hostname - BYPASS')
-        return 1001
+        if not net_helper.ping(host):
+            LOGGER.info('')
+            LOGGER.warning(f'{host:20} invalid, could not resolve hostname - BYPASS')
+            return 1001
     
     ports = _extract_ports(tokens[1])
     if len(ports) == 0:
@@ -261,10 +262,6 @@ def main():
         log_format = lh.DEFAULT_DEBUG_LOGFMT
 
     lh.configure_logger(log_level=log_level, log_format=log_format, brightness=False)
-
-    # version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), fg=ColorFG.WHITE2, style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
-    # console.print_line_separator(' ', 80)
-    # console.print_line_separator(f'{parser.prog} {version}', 80)
 
     version = f"(v{console.cwrap(ProjectHelper.determine_version('dt-cli-tools'), style=[TextStyle.ITALIC, TextStyle.UNDERLINE])})"
     console.print_line_separator(' ', 80)
