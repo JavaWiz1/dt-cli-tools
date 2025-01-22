@@ -122,8 +122,8 @@ def audio_device_report():
             LOGGER.info(f'Host API [{h_idx:1}] - {api_name} {" [DEFAULT]" if h_idx == default_host_api else ""}')
         LOGGER.info(f'devices: {num_devices:2}   default input device: {dflt_i_idx:2}   default output device: {dflt_o_idx:2}')
         LOGGER.info('-'*93)
-        LOGGER.info('h / d  idx Name                           ic oc  li lat  lo lat  hi lat  ho lat  Sample Rate')
-        LOGGER.info('------ --- ------------------------------ -- --  ------- ------- ------- ------- -----------')
+        LOGGER.info('h / d  idx Name                           ic  oc   li lat  lo lat  hi lat  ho lat  Sample Rate')
+        LOGGER.info('------ --- ------------------------------ --- ---  ------- ------- ------- ------- -----------')
         for d_idx in range(api_info.get('deviceCount')):
             device = pa.get_device_info_by_host_api_device_index(h_idx, d_idx)
             if device.get('index') in [dflt_i_idx, dflt_o_idx]:
@@ -139,7 +139,7 @@ def audio_device_report():
             hi_latency  = device.get('defaultHighInputLatency')
             ho_latency  = device.get('defaultHighOutputLatency')
             sample_rate = device.get('defaultSampleRate')
-            LOGGER.log(log_level,f'[{h_idx:1},{d_idx:2}] {dev_idx:3} {dev_name[:30]:30} {i_channels:2} {o_channels:2}  {li_latency:7.4f} {lo_latency:7.4f} {hi_latency:7.4f} {ho_latency:7.4f} {sample_rate:12.0f}')
+            LOGGER.log(log_level,f'[{h_idx:1},{d_idx:2}] {dev_idx:3} {dev_name[:30]:30} {i_channels:3} {o_channels:3}  {li_latency:7.4f} {lo_latency:7.4f} {hi_latency:7.4f} {ho_latency:7.4f} {sample_rate:11.0f}')
         LOGGER.info('')
     LOGGER.info('')
     LOGGER.info('LEGEND - ic    : Max Input Channels          oc    : Max Output Channels)')
