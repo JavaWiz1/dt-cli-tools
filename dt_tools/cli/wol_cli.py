@@ -76,12 +76,16 @@ class _WOL_Device():
 
 
 def _lookup_mac_entry(device_id: str) -> _WOL_Device:
+    LOGGER.trace(f'_lookup_mac_entry("{device_id}")')
     cached_mac_dict = _retrieve_device_dict()
     # found_entry = {'name': '', 'ip': '', 'mac': ''}
     found_entry = None
+
     for entry in cached_mac_dict.values():
+        LOGGER.trace(f'- {entry}')
         if entry.ip == device_id or entry.name.lower().startswith(device_id.lower()):
             found_entry = entry
+            LOGGER.trace('- FOUND')
             break
     return found_entry
 
@@ -130,11 +134,14 @@ def _retrieve_device_dict() -> Dict[str, _WOL_Device]:
     device_dict: Dict[str, _WOL_Device] = {}
     if MAC_INFO_LOCATION.exists():
         LOGGER.debug(f'loading device dict: {MAC_INFO_LOCATION}')
-        json_dict = json.loads(MAC_INFO_LOCATION.read_text())
-        for k,v in json_dict.items():
-            # Reconstruct WOL_Device
-            device = _WOL_Device(name=v['name'], ip=v['ip'], mac=v['mac'], modified=v['modified'])
-            device_dict[k] = device
+        try:
+            json_dict = json.loads(MAC_INFO_LOCATION.read_text())
+            for k,v in json_dict.items():
+                # Reconstruct WOL_Device
+                device = _WOL_Device(name=v['name'], ip=v['ip'], mac=v['mac'], modified=v['modified'])
+                device_dict[k] = device
+        except Exception as ex:
+            LOGGER.error(f'Error loading {MAC_INFO_LOCATION}, {ex}')
 
     LOGGER.info(f'  - Retrieved cached device list. {len(device_dict.keys())} entries loaded.')
     return device_dict
@@ -301,7 +308,7 @@ def main() -> int:
     parser.add_argument('-v','--verbose', action='count', default=0, help="Verbose logging, more v's, more verbose")
     
     try:
-        sys.argv.append('-e')
+        # sys.argv.append('-e')
         args = parser.parse_args()
     except (argparse.ArgumentError, IndexError) as ae:
         LOGGER.critical(repr(ae))
