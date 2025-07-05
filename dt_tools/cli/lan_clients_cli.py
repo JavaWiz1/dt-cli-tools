@@ -106,13 +106,13 @@ def _build_queue(load_via_broadcast: bool = False, sort_key: SORT_KEY = SORT_KEY
     spinner = Spinner('Searching', show_elapsed=True)
     if load_via_broadcast:
         search_type = "ARP Broadcast"
-        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC) # type: ignore
-        spinner.start_spinner(f'searching for clients via {search_display}')
+        # search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC) # type: ignore
+        spinner.start_spinner(f'searching for clients via {search_type}')
         client_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True, include_mac_vendor=True)
     else:
         search_type = "ARP Cache"
-        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC) # type: ignore
-        spinner.start_spinner(f'searching for clients via {search_display}')
+        # search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC) # type: ignore
+        spinner.start_spinner(f'searching for clients via {search_type}')
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
     LOGGER.debug(f'{len(client_list)} clients retrieved.')
