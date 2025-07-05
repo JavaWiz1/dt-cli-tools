@@ -334,12 +334,14 @@ def main() -> int:
                             brightness=False)
     
     LOGGER.debug('')
-    LOGGER.debug(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}')
-
+    LOGGER.debug(f'{console.cwrap(parser.description, fg=ColorFG.WHITE2, style=TextStyle.BOLD)}') # type: ignore
+    if not MAC_INFO_LOCATION.exists():
+        MAC_INFO_LOCATION.parent.mkdir(exist_ok=True)
+        MAC_INFO_LOCATION.touch()
     success = False
     wol = WOL()
     if args.mac:
-        LOGGER.info(f'Sending WOL to {console.cwrap(args.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])}', end=end_tag, flush=True)
+        LOGGER.info(f'Sending WOL to {console.cwrap(args.mac, fg=ColorFG.WHITE2, style=[TextStyle.BOLD,TextStyle.ITALIC])}', end=end_tag, flush=True) # type: ignore
         success = wol.send_wol_via_mac(args.mac, args.timeout)
         if not success:
             LOGGER.error(f'- {wol.status_message}')

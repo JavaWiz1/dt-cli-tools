@@ -1,7 +1,7 @@
 [tool.poetry]
 package-mode = true 
 name = "dt-cli-tools"
-version = "0.1.26"
+version = "0.1.27"
 description = "Various CLIs created from dt-* packages"
 authors = ["Al DAmico <JavaWiz1@hotmail.com>"]
 readme = "README.md"
@@ -32,7 +32,7 @@ dt-misc = "*"
 dataclasses-json = "*"
 
 [tool.poetry.group.dev.dependencies]
-sphinx-rtd-theme = "^2"
+# sphinx-rtd-theme = "^2"
 
 
 [tool.poetry.scripts]

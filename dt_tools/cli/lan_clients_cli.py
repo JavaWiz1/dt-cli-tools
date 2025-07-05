@@ -106,12 +106,12 @@ def _build_queue(load_via_broadcast: bool = False, sort_key: SORT_KEY = SORT_KEY
     spinner = Spinner('Searching', show_elapsed=True)
     if load_via_broadcast:
         search_type = "ARP Broadcast"
-        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC)
+        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC) # type: ignore
         spinner.start_spinner(f'searching for clients via {search_display}')
         client_list = net_helper.get_lan_clients_ARP_broadcast(include_hostname=True, include_mac_vendor=True)
     else:
         search_type = "ARP Cache"
-        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC)
+        search_display = console.cwrap(search_type, fg=ColorFG.DEFAULT, style=TextStyle.ITALIC) # type: ignore
         spinner.start_spinner(f'searching for clients via {search_display}')
         client_list = net_helper.get_lan_clients_from_ARP_cache(include_hostname=True, include_mac_vendor=True)
 
@@ -144,6 +144,7 @@ def _queue_item_worker(name: str):
         ip_address = lan_entry.ip # ip_queue.get()
         host_name = 'unknown' if lan_entry.hostname is None else lan_entry.hostname
         mac = 'unknown' if lan_entry.mac is None else lan_entry.mac
+        # Is below needed?  Get lan specified Vendor = True (Save a call to inet)
         if mac != 'unknown' and lan_entry.vendor is None:
             lan_entry.vendor = nh.get_vendor_from_mac(mac)
         vendor = 'unknown' if lan_entry.vendor is None else lan_entry.vendor
