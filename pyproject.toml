@@ -21,10 +21,6 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10"
 
-# dt-foundation = {path = "../dt-foundation", develop = true }
-# dt-console = {path = "../dt-console", develop = true }
-# dt-net = {path = "../dt-net", develop = true }
-# dt-misc = {path = "../dt-misc", develop = true }
 dt-foundation = "*"
 dt-console = "*"
 dt-net = "*"
