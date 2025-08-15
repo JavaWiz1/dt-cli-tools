@@ -46,17 +46,17 @@ import pathlib
 import sys
 import textwrap
 import threading
+from datetime import datetime as dt
 from typing import List
-
-from loguru import logger as LOGGER
 
 import dt_tools.logger.logging_helper as lh
 import dt_tools.net.net_helper as net_helper
+from dt_tools.console.console_helper import ColorFG
+from dt_tools.console.console_helper import ConsoleHelper as console
+from dt_tools.console.console_helper import TextStyle
 from dt_tools.os.os_helper import OSHelper
 from dt_tools.os.project_helper import ProjectHelper
-from dt_tools.console.console_helper import ConsoleHelper as console
-from dt_tools.console.console_helper import ColorFG, TextStyle
-
+from loguru import logger as LOGGER
 
 stop_event = threading.Event()
 
@@ -152,7 +152,8 @@ def _process_host_connection(host_connection: str, wait: float = 1.0, only_open:
     display_closed = not only_open
     num_ports = len(ports)
     futures = []
-    thread_cnt = min(num_ports, 30) # Limit thread count to 30 max
+    thread_cnt = min(num_ports, 256) # Limit thread count to 30 max
+    start_time = dt.now()
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_cnt) as executor:
         if num_ports > thread_cnt:
             LOGGER.info('')
@@ -168,6 +169,10 @@ def _process_host_connection(host_connection: str, wait: float = 1.0, only_open:
             ret_cd += future.result()
         if ret_cd == num_ports:
             LOGGER.warning('  No open ports detected.')
+
+    elapsed = dt.now() - start_time
+    LOGGER.info('')
+    LOGGER.info(f'Elapsed {elapsed.total_seconds():.2f} secs.')
     return ret_cd
 
 def _check_host(host: str, port: int, wait: float = 1.5, display_closed: bool = True) -> int:
