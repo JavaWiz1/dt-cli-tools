@@ -152,7 +152,7 @@ def _process_host_connection(host_connection: str, wait: float = 1.0, only_open:
     display_closed = not only_open
     num_ports = len(ports)
     futures = []
-    thread_cnt = min(num_ports, 256) # Limit thread count to 30 max
+    thread_cnt = min(num_ports, 256) # Limit thread count to 256 max
     start_time = dt.now()
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_cnt) as executor:
         if num_ports > thread_cnt:
